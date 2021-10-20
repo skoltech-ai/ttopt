@@ -7,9 +7,9 @@ input X is the [samples, dimension] numpy array.
 As a result of the script work we expect the output in console like this:
 "
 ...
-Rosen-100d | k=1.00e+07 | t_cur=2.42e+01 | e_x=3.02e-02 e_y=1.21e-01
+Rosen-100d | k=1.00e+07 | t_cur=1.78e+01 | e_x=6.04e-03 e_y=9.79e-03
 ----------------------------------------------------------------------
-Rosen-100d | k=1.00e+07 | t_all=4.06e+02 | e_x=3.02e-02 e_y=1.21e-01
+Rosen-100d | k=1.00e+07 | t_all=2.62e+02 | e_x=6.04e-03 e_y=9.79e-03
 "
 
 """
@@ -21,11 +21,11 @@ from ttopt import TTOpt
 from ttopt import ttopt_init
 
 
-np.random.seed(12345)
+np.random.seed(16333)
 
 
 d = 100                     # Number of function dimensions:
-rmax = 4                    # Maximum TT-rank while cross-like iterations
+rmax = 6                    # Maximum TT-rank while cross-like iterations
 def f(X):                   # Target function
     return rosen(X.T)
 
@@ -37,7 +37,7 @@ tto = TTOpt(
     a=-2.,                  # Grid lower bound (number or list of len d)
     b=+2.,                  # Grid upper bound (number or list of len d)
     p=2,                    # The grid size factor (there will n=p^q points)
-    q=10,                   # The grid size factor (there will n=p^q points)
+    q=12,                   # The grid size factor (there will n=p^q points)
     evals=1.E+7,            # Number of function evaluations
     name='Rosen',           # Function name for log (this is optional)
     x_min_real=np.ones(d),  # Real value of x-minima (x; this is for test)

@@ -10,9 +10,9 @@ The target function and all the selected parameters are the same as in the
 As a result of the script work we expect the output in console like this:
 "
 ...
-Rosen-10d | k=1.00e+06 | t_cur=4.21e-01 | e_x=6.51e-05 e_y=1.48e-06
+Rosen-10d | k=1.00e+06 | t_cur=4.18e-01 | e_x=1.19e-04 e_y=7.23e-06
 ----------------------------------------------------------------------
-Rosen-10d | k=1.00e+06 | t_all=4.74e+00 | e_x=6.51e-05 e_y=1.48e-06 
+Rosen-10d | k=1.00e+06 | t_all=4.76e+00 | e_x=1.19e-04 e_y=7.23e-06 
 "
 
 """
@@ -24,7 +24,7 @@ from ttopt import TTOpt
 from ttopt import ttopt_init
 
 
-np.random.seed(282)
+np.random.seed(16333)
 
 
 d = 10                      # Number of function dimensions:
