@@ -166,10 +166,6 @@ class TTOpt():
         self.with_log = bool(with_log)
         self.with_opt = bool(with_opt)
 
-        # One special case:
-        if self.is_vect and self.with_opt:
-            raise ValueError('Flag "with_opt" not supported for "is_vect" case')
-
         # Inner variables:
         self.cache = {}     # Cache for the results of requests to function
         self.cache_opt = {} # Cache for the options while requests to function
@@ -207,6 +203,11 @@ class TTOpt():
     def k_total(self):
         """Total number of requests (both function calls and cache usage)."""
         return self.k_cache + self.k_evals
+
+    @property
+    def opt_min(self):
+        """Current value of option of the function related to min-point."""
+        return self.opt_min_list[-1] if len(self.opt_min_list) else None
 
     @property
     def t_evals_mean(self):
@@ -311,9 +312,12 @@ class TTOpt():
 
         """
         if not self.is_vect:
-            Y = np.array([self.calc(i) for i in I])
-            self._opt = [None for _ in range(Y.size)]
-            return Y
+            Y, _opt = [], []
+            for i in I:
+                Y.append(self.calc(i))
+                _opt.append(self._opt)
+            self._opt = _opt
+            return np.array(Y)
 
         t_total = tpc()
 
