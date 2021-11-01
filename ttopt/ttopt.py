@@ -170,7 +170,9 @@ class TTOpt():
         self.cache = {}     # Cache for the results of requests to function
         self.cache_opt = {} # Cache for the options while requests to function
         self.k_cache = 0    # Number of requests, then cache was used
+        self.k_cache_curr = 0
         self.k_evals = 0    # Number of requests, then function was called
+        self.k_evals_curr = 0
         self.t_evals = 0.   # Total time of function calls
         self.t_total = 0.   # Total time of computations (including cache usage)
         self.t_minim = 0    # Total time of work for minimizator
@@ -182,6 +184,7 @@ class TTOpt():
         self.y_min_list = []
         self.opt_min_list = []
         self.evals_min_list = []
+        self.cache_min_list = []
 
     @property
     def e_x(self):
@@ -251,7 +254,8 @@ class TTOpt():
             y = self.f(x)
             self._opt = [None for _ in range(y.size)] if is_many else None
 
-        self.k_evals += y.size if is_many else 1
+        self.k_evals_curr = y.size if is_many else 1
+        self.k_evals += self.k_evals_curr
         self.t_evals += tpc() - t_evals
 
         return y
@@ -267,6 +271,8 @@ class TTOpt():
             float: The output of the function.
 
         """
+        self.k_cache_curr = 0
+
         if self.is_vect:
             return self.comp(i.reshape(1, -1))[0]
 
@@ -286,7 +292,8 @@ class TTOpt():
         else:
             y = self.cache[s]
             self._opt = self.cache_opt[s]
-            self.k_cache += 1
+            self.k_cache_curr = 1
+            self.k_cache += self.k_cache_curr
 
         self.t_total += tpc() - t_total
 
@@ -312,6 +319,8 @@ class TTOpt():
             This function may be implemented more efficiently.
 
         """
+        self.k_cache_curr = 0
+
         if not self.is_vect:
             Y, _opt = [], []
             for i in I:
@@ -332,7 +341,8 @@ class TTOpt():
 
         # Points that are not presented in the cache:
         J = [i for i in I if self.i2s(i) not in self.cache]
-        self.k_cache += len(I) - len(J)
+        self.k_cache_curr = len(I) - len(J)
+        self.k_cache += self.k_cache_curr
 
         # We add new points (J) to the storage:
         if len(J):
@@ -408,7 +418,8 @@ class TTOpt():
         self.x_min_list.append(x_min)
         self.y_min_list.append(y_min)
         self.opt_min_list.append(opt_min)
-        self.evals_min_list.append(I.shape[0])
+        self.evals_min_list.append(self.k_evals_curr)
+        self.cache_min_list.append(self.k_cache_curr)
 
         is_better = len(self.y_min_list) == 1 or (y_min < self.y_min_list[-2])
         if self.callback and is_better:
