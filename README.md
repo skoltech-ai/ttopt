@@ -9,7 +9,6 @@ Gradient-free global optimization algorithm for multidimensional functions based
 
 - At the moment, this is a draft version of the software product. Significant changes in algorithms and interface are possible without maintaining backward compatibility.
 - Within the framework of the current implementation, the result essentially depends on the choice of the initial approximation, but we have a number of ideas on how to fix this and, in general, how to significantly improve the accuracy/performance of the algorithm.
-- There is a known bug. When using a cache of values, the algorithm sometimes converges until the maximum allowable number of real requests to the target function is reached and then requests only values from the cache, which leads to endless program operation. This point will be corrected in the future.
 - If you are planning to use this software product to solve a specific problem, please contact the developers.
 
 

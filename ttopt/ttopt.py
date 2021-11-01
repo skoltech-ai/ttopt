@@ -181,6 +181,7 @@ class TTOpt():
         self.x_min_list = []
         self.y_min_list = []
         self.opt_min_list = []
+        self.evals_min_list = []
 
     @property
     def e_x(self):
@@ -365,6 +366,16 @@ class TTOpt():
         if self.evals is not None and self.k_evals >= self.evals:
             return None, None
 
+        # We return None if the number of requests to the cache is 2 times
+        # higher than the number of requests to the function:
+        if self.with_cache and self.k_cache >= 2 * self.k_evals:
+            text = '!!! TTOpt warning : '
+            text += 'the number of requests to the cache is 2 times higher '
+            text += 'higher than the number of requests to the function. '
+            text += 'The work is finished before max func-evals reached.'
+            print(text)
+            return None, None
+
         # We truncate the list of requested points if it exceeds the limit:
         eval_curr = I.shape[0]
         is_last = self.evals is not None and self.k_evals+eval_curr>=self.evals
@@ -397,6 +408,7 @@ class TTOpt():
         self.x_min_list.append(x_min)
         self.y_min_list.append(y_min)
         self.opt_min_list.append(opt_min)
+        self.evals_min_list.append(I.shape[0])
 
         is_better = len(self.y_min_list) == 1 or (y_min < self.y_min_list[-2])
         if self.callback and is_better:
