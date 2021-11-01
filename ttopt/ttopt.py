@@ -379,12 +379,13 @@ class TTOpt():
         # We return None if the number of requests to the cache is 2 times
         # higher than the number of requests to the function:
         if self.with_cache and self.k_cache >= 2 * self.k_evals:
-            text = '!!! TTOpt warning : '
-            text += 'the number of requests to the cache is 2 times higher '
-            text += 'higher than the number of requests to the function. '
-            text += 'The work is finished before max func-evals reached.'
-            print(text)
-            return None, None
+            if self.k_cache >= self.evals and self.k_cache >= 2 * self.k_evals:
+                text = '!!! TTOpt warning : '
+                text += 'the number of requests to the cache is 2 times higher '
+                text += 'than the number of requests to the function. '
+                text += 'The work is finished before max func-evals reached.'
+                print(text)
+                return None, None
 
         # We truncate the list of requested points if it exceeds the limit:
         eval_curr = I.shape[0]
