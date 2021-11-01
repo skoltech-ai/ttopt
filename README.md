@@ -39,7 +39,7 @@ The demo-scripts with detailed comments are collected in the folder `demo`:
 
 ## Authors
 
-- Andrei Chertkov (a.chertkov@skoltech.ru);
-- Ivan Oseledets (i.oseledets@skoltech.ru);
-- Roman Schutski (r.schutski@skoltech.ru);
-- Konstantin Sozykin (konstantin.sozykin@skoltech.ru).
+- [Andrei Chertkov](https://github.com/AndreiChertkov) (a.chertkov@skoltech.ru);
+- [Ivan Oseledets](https://github.com/oseledets) (i.oseledets@skoltech.ru);
+- [Roman Schutski](https://github.com/Qbit-) (r.schutski@skoltech.ru);
+- [Konstantin Sozykin](https://github.com/gogolgrind) (konstantin.sozykin@skoltech.ru).
