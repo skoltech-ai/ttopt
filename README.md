@@ -1,40 +1,58 @@
 # ttopt
 
-
-## Description
-
-Gradient-free global optimization algorithm for multidimensional functions based on the low rank tensor train (TT) format and maximum volume principle.
-
-**Notes**:
-
-- At the moment, this is a draft version of the software product. Significant changes in algorithms and interface are possible without maintaining backward compatibility.
-- Within the framework of the current implementation, the result essentially depends on the choice of the initial approximation, but we have a number of ideas on how to fix this and, in general, how to significantly improve the accuracy/performance of the algorithm.
-- If you are planning to use this software product to solve a specific problem, please contact the developers.
+> Gradient-free optimization method for multidimensional functions based on the low rank tensor train (TT) format and maximal-volume principle.
 
 
 ## Installation
 
-The package (it requires the [Python](https://www.python.org) programming language of the version >= 3.6) can be installed via pip: `pip install ttopt`. It can be also downloaded from the repository [ttopt](https://github.com/SkoltechAI/ttopt) and installed by `python setup.py install` command from the root folder of the project.
-
-> Required python packages [numpy](https://numpy.org), [scipy](https://www.scipy.org) and [maxvolpy](https://bitbucket.org/muxas/maxvolpy/src/master/) will be automatically installed during the installation of the main software product. Note that in some cases it is better to install the `maxvolpy` package manually.
+1. Install [python](https://www.python.org) (version >= 3.7; you may use [anaconda](https://www.anaconda.com) package manager);
+2. Install basic dependencies:
+    ```bash
+    pip install numpy cython scipy
+    ```
+3. Install additional dependency [maxvolpy](https://bitbucket.org/muxas/maxvolpy/src/master/) with effective realization of `maxvol` algorithm:
+    ```bash
+    pip install maxvolpy
+    ```
+4. Install dependencies for demo calculations (it is optional):
+    ```bash
+    pip install matplotlib cma
+    ```
+5. Install the `ttopt` package (from the root folder of the package):
+    ```bash
+    python setup.py install
+    ```
 
 
 ## Documentation
 
 The documentation is located in the `doc` folder. To view the documentation, simply open the file `doc/_build/html/index.html` in a web browser.
 
-> At the moment, this is a draft of documentation, however, there are already detailed comments on the use of functions and the meaning of their arguments. In the future, the documentation will be hosted on a separate web page.
-
 
 ## Examples
 
 The demo-scripts with detailed comments are collected in the folder `demo`:
+
 - `base.py` - we find the minimum for the 10-dimensional Rosenbrock function with vectorized input;
 - `qtt.py` - we do almost the same as in the `base.py` script, but use the QTT-based approach (note that results are much more better then in the `base.py` example);
 - `qtt_100d.py` - we do almost the same as in the `qtt.py` script, but approximate the 100-dimensional Rosenbrock function;
 - `vect.py` - we find the minimum for the simple analytic function with "simple input" (the function is not vectorized);
 - `cache.py` - we find the minimum for the simple analytic function to demonstrate the usage of cache;
 - `tensor.py` - in this example we find the minimum for the multidimensional array/tensor (i.e., discrete function).
+
+
+## Calculations for benchmarks
+
+The scripts for comparison of our approach with baselines (ES algorithms) for the analytical benchmark functions are located in the folder `demo_calc`. To run calculations, you can proceed as follows `python demo_calc/run.py --KIND`. Possible values for `KIND`: `comp` - compare different solvers; `iter` - check dependency on number of calls for the target function; `quan` - check effect of the QTT-usage; `rank` - check dependency on the rank; `show` - show results of the previous calculations.
+
+> All results will be collected in the folders `demo_calc/res_data` (saved results in the pickle format), `demo_calc/res_logs` (text files with logs) and `demo_calc/res_plot` (figures with results).
+
+To reproduce the results from the paper (it is currently in the process of being published), run the following scripts from the root folder of the package:
+1. Run `python demo_calc/run.py -d 10 -p 2 -q 25 -r 4 --evals 1.E+5 --reps 10 --kind comp`;
+2. Run `python demo_calc/run.py -d 10 -p 2 -q 25 -r 4 --reps 10 --kind iter`;
+3. Run `python demo_calc/run.py -d 10 -r 4 --evals 1.E+5 --reps 10 --kind quan`;
+4. Run `python demo_calc/run.py -d 10 -p 2 -q 25 --evals 1.E+5 --reps 10 --kind rank`;
+5. Run `python demo_calc/run.py -d 10 --kind show`. The results will be saved to the `demo_calc/res_logs` and `demo_calc/res_plot` folders.
 
 
 ## Authors
