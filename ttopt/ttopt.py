@@ -433,7 +433,7 @@ class TTOpt():
         X = T * (B - A) + A
         return X
 
-    def info(self, is_final=True):
+    def info(self, with_e_x=True, with_e_y=True, is_final=True):
         """Return text description of the progress of optimizer work."""
         text = ''
 
@@ -453,9 +453,9 @@ class TTOpt():
         if self.y_min_real is None and self.y_min is not None:
             text += f'y={self.y_min:-.6f} '
         else:
-            if self.e_x is not None:
+            if with_e_x and self.e_x is not None:
                 text += f'e_x={self.e_x:-8.2e} '
-            if self.e_y is not None:
+            if with_e_y and self.e_y is not None:
                 text += f'e_y={self.e_y:-8.2e} '
 
         return text
