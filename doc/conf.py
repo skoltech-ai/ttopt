@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 
 project = 'ttopt'
-copyright = '2021'
+copyright = '2021-2022'
 author = 'Andrei Chertkov'
 language = 'en'
 html_theme = 'alabaster'
