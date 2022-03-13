@@ -11,9 +11,9 @@ class TTOpt():
 
     Class for computation of the minimum for the implicitly given d-dimensional
     array (tensor) or a function of d-dimensional argument. An adaptive method
-    based on the tensor train (TT) approximation and the the cross-maximum
-    volume principle is used. Cache of requested values (its usage leads to
-    faster computation if one point is computed for a long time) and QTT-based
+    based on the tensor train (TT) approximation and the cross-maximum volume
+    principle is used. Cache of requested values (its usage leads to faster
+    computation if one point is computed for a long time) and QTT-based
     representation of the grid (its usage in many cases leads to more accurate
     results) are supported.
 
@@ -25,7 +25,7 @@ class TTOpt():
             in the case if "is_vect" flag is False. For the case of the tensor
             approximation (if "is_func" flag is False), the argument X relates
             to the one or many (depending on the value of the flag "is_vect")
-            multi indices of the corresponding array/tensor. Function should
+            multi-indices of the corresponding array/tensor. Function should
             return the values in the requested points (is 1D numpy array of the
             shape [samples] of float or only one float value depending on the
             value of "is_vect" flag). If "with_opt" flag is True, then function
@@ -76,10 +76,10 @@ class TTOpt():
             we approximate the tensor (the arguments of f correspond to
             discrete multidimensional tensor indices). It is True by default.
         is_vect (bool): If flag is True, then function should accept 2D
-            numpy array of the shape [samples, d] and return 1D numpy array
-            of the shape [samples]. Otherwise, the function should accept 1D
-            numpy array (one multidimensional point) and return the float
-            value. It is True by default.
+            numpy array of the shape [samples, d] (batch of points or indices)
+            and return 1D numpy array of the shape [samples]. Otherwise, the
+            function should accept 1D numpy array (one multidimensional point)
+            and return the float value. It is True by default.
         with_cache (bool): If flag is True, then all requested values are
             stored and retrieved from the storage upon repeated requests.
             Note that this leads to faster computation if one point is
@@ -96,19 +96,20 @@ class TTOpt():
             False by default.
 
     Note:
-        Call "calc" to evaluate function for one tensor multi index and call
-        "comp" to evaluate function in the set of grid points (both of these
+        Call "calc" to evaluate function for one tensor multi-index and call
+        "comp" to evaluate function in the set of multi-indices (both of these
         functions can be called regardless of the value of the flag "is_vect").
+        Call "minimize" to find the global minimum of the function of interest.
 
     """
 
-    def __init__(self, f, d, a=None, b=None, n=None, p=None, q=None, evals=None,
-        name=None, callback=None, x_min_real=None, y_min_real=None,
+    def __init__(self, f, d, a=None, b=None, n=None, p=None, q=None,
+        evals=None, name=None, callback=None, x_min_real=None, y_min_real=None,
         is_func=True, is_vect=True, with_cache=False, with_log=False,
         with_opt=False):
         # The target function and its dimension:
         self.f = f
-        self.d = d
+        self.d = int(d)
 
         # Set grid lower bound:
         if isinstance(a, (int, float)):
@@ -125,7 +126,7 @@ class TTOpt():
         # Set grid upper bound:
         if isinstance(b, (int, float)):
             self.b = np.ones(self.d, dtype=float) * b
-        elif a is not None:
+        elif b is not None:
             self.b = np.asanyarray(b, dtype=float)
         else:
             if is_func:
@@ -141,7 +142,7 @@ class TTOpt():
             self.p = int(p)
             self.q = int(q)
             self.n = np.ones(self.d * self.q, dtype=int) * self.p
-            self.n_func = np.ones(self.d, dtype=int) * self.p**self.q
+            self.n_func = np.ones(self.d, dtype=int) * (self.p**self.q)
         else:
             if p is not None or q is not None:
                 raise ValueError('If n is set, then p and q should be None')
@@ -189,13 +190,13 @@ class TTOpt():
     @property
     def e_x(self):
         """Current error for approximation of argmin of the function."""
-        if self.x_min_real is not None and  self.x_min is not None:
+        if self.x_min_real is not None and self.x_min is not None:
             return np.linalg.norm(self.x_min - self.x_min_real)
 
     @property
     def e_y(self):
         """Current error for approximation of the minumum of the function."""
-        if self.y_min_real is not None or self.y_min is not None:
+        if self.y_min_real is not None and self.y_min is not None:
             return np.abs(self.y_min - self.y_min_real)
 
     @property
@@ -232,33 +233,6 @@ class TTOpt():
     def y_min(self):
         """Current approximation of min of the function of interest."""
         return self.y_min_list[-1] if len(self.y_min_list) else None
-
-    def _eval(self, i):
-        """Helper that computes target function in one or many points."""
-        t_evals = tpc()
-
-        if isinstance(i, list):
-            i = np.array(i)
-        i = i.astype(int)
-
-        is_many = len(i.shape) == 2
-
-        if self.is_func:
-            x = self.i2x_many(i) if is_many else self.i2x(i)
-        else:
-            x = i
-
-        if self.with_opt:
-            y, self._opt = self.f(x)
-        else:
-            y = self.f(x)
-            self._opt = [None for _ in range(y.size)] if is_many else None
-
-        self.k_evals_curr = y.size if is_many else 1
-        self.k_evals += self.k_evals_curr
-        self.t_evals += tpc() - t_evals
-
-        return y
 
     def calc(self, i):
         """Calculate the function for the given multiindex.
@@ -308,15 +282,12 @@ class TTOpt():
 
         Returns:
             np.ndarray: The outputs of the function, that are collected in
-                1D numpy array of the shape [samples].
+            1D numpy array of the shape [samples].
 
         Note:
             The set of points (I) should not contain duplicate points. If it
             contains duplicate points (that are not in the cache), then each of
             them will be recalculated without using the cache.
-
-        Todo:
-            This function may be implemented more efficiently.
 
         """
         self.k_cache_curr = 0
@@ -357,6 +328,7 @@ class TTOpt():
         self._opt = np.array([self.cache_opt[self.i2s(i)] for i in I])
 
         self.t_total += tpc() - t_total
+
         return Y
 
     def comp_min(self, I, i_min=None, y_min=None, opt_min=None):
@@ -378,7 +350,7 @@ class TTOpt():
 
         # We return None if the number of requests to the cache is 2 times
         # higher than the number of requests to the function:
-        if self.with_cache and self.k_cache >= 2 * self.k_evals:
+        if self.with_cache:
             if self.k_cache >= self.evals and self.k_cache >= 2 * self.k_evals:
                 text = '!!! TTOpt warning : '
                 text += 'the number of requests to the cache is 2 times higher '
@@ -502,12 +474,7 @@ class TTOpt():
         self.t_minim = tpc() - t_minim
 
     def qtt_parse_many(self, I_qtt):
-        """Transforms tensor indices from QTT (long) to base (short) format.
-
-        Todo:
-            Optimize the code!
-
-        """
+        """Transforms tensor indices from QTT (long) to base (short) format."""
         samples = I_qtt.shape[0]
         n_qtt = [self.n[0]]*self.q
         I = np.zeros((samples, self.d))
@@ -519,3 +486,27 @@ class TTOpt():
     def s2i(self, s):
         """Transforms string like '1-2-3' into array of int like [1, 2, 3]."""
         return np.array([int(v) for v in s.split('-')], dtype=int)
+
+    def _eval(self, i):
+        """Helper that computes target function in one or many points."""
+        t_evals = tpc()
+
+        i = np.asanyarray(i, dtype=int)
+        is_many = len(i.shape) == 2
+
+        if self.is_func:
+            x = self.i2x_many(i) if is_many else self.i2x(i)
+        else:
+            x = i
+
+        if self.with_opt:
+            y, self._opt = self.f(x)
+        else:
+            y = self.f(x)
+            self._opt = [None for _ in range(y.size)] if is_many else None
+
+        self.k_evals_curr = y.size if is_many else 1
+        self.k_evals += self.k_evals_curr
+        self.t_evals += tpc() - t_evals
+
+        return y
