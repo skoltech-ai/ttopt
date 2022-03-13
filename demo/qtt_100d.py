@@ -7,9 +7,9 @@ input X is the [samples, dimension] numpy array.
 As a result of the script work we expect the output in console like this:
 "
 ...
-Rosen-100d | k=1.00e+07 | t_cur=1.78e+01 | e_x=6.04e-03 e_y=9.79e-03
+Rosen-100d | k=1.00e+07 | t_cur=1.99e+01 | e_x=7.16e-03 e_y=2.18e-02
 ----------------------------------------------------------------------
-Rosen-100d | k=1.00e+07 | t_all=2.62e+02 | e_x=6.04e-03 e_y=9.79e-03
+Rosen-100d | k=1.00e+07 | t_all=2.85e+02 | e_x=7.16e-03 e_y=2.18e-02
 "
 
 """

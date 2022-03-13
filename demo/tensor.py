@@ -6,9 +6,9 @@ Y[i_1, i_2, ..., i_d] = (i_1 - 2)^2 + (i_2 - 3)^2 + i_2^4 + i_3^4 + ... + i_d^4.
 As a result of the script work we expect the output in console like this:
 "
 ...
-Tensor-10d | k=1.00e+05 | t_cur=9.70e-03 | e_x=0.00e+00 e_y=0.00e+00
+Tensor-10d | k=1.00e+05 | t_cur=9.72e-03 | e_x=0.00e+00 e_y=0.00e+00
 ----------------------------------------------------------------------
-Tensor-10d | k=1.00e+05 | t_all=9.42e-02 | e_x=0.00e+00 e_y=0.00e+00
+Tensor-10d | k=1.00e+05 | t_all=9.96e-02 | e_x=0.00e+00 e_y=0.00e+00
 y_opt :  0
 x_opt :  [2 3 0 0 0 0 0 0 0 0]
 "

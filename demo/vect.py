@@ -6,9 +6,9 @@ input x is the [dimension] numpy array (not vectorized!).
 As a result of the script work we expect the output in console like this:
 "
 ...
-Simple-5d | k=1.00e+04 | t_cur=1.42e-01 | e_x=3.55e-02 e_y=1.03e-04
+Simple-5d | k=1.00e+04 | t_cur=1.41e-01 | e_x=3.55e-02 e_y=1.03e-04
 ----------------------------------------------------------------------
-Simple-5d | k=1.00e+04 | t_all=1.62e-01 | e_x=3.55e-02 e_y=1.03e-04 
+Simple-5d | k=1.00e+04 | t_all=1.61e-01 | e_x=3.55e-02 e_y=1.03e-04
 "
 
 """

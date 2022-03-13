@@ -10,9 +10,9 @@ The target function and all the selected parameters are the same as in the
 As a result of the script work we expect the output in console like this:
 "
 ...
-Rosen-10d | k=1.00e+06 | t_cur=4.18e-01 | e_x=1.19e-04 e_y=7.23e-06
+Rosen-10d | k=1.00e+06 | t_cur=4.21e-01 | e_x=2.68e-01 e_y=5.89e-02
 ----------------------------------------------------------------------
-Rosen-10d | k=1.00e+06 | t_all=4.76e+00 | e_x=1.19e-04 e_y=7.23e-06 
+Rosen-10d | k=1.00e+06 | t_all=4.74e+00 | e_x=2.68e-01 e_y=5.89e-02
 "
 
 """
