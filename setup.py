@@ -33,9 +33,9 @@ setup_args = dict(
     long_description_content_type='text/markdown',
     author='Andrei Chertkov',
     author_email='a.chertkov@skoltech.ru',
-    url='https://github.com/AndreiChertkov/ttopt',
+    url='https://github.com/SkoltechAI/ttopt',
     classifiers=[
-        'Development Status :: 3 - Alpha', # 4 - Beta, 5 - Production/Stable
+        'Development Status :: 4 - Beta', # 3 - Alpha, 5 - Production/Stable
         'License :: OSI Approved :: MIT License',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Mathematics',
@@ -54,7 +54,7 @@ setup_args = dict(
     packages=find_packages('ttopt', './ttopt/'),
     python_requires='>=3.6',
     project_urls={
-        'Source': 'https://github.com/AndreiChertkov/ttopt',
+        'Source': 'https://github.com/SkoltechAI/ttopt',
     },
 )
 
@@ -62,5 +62,6 @@ setup_args = dict(
 if __name__ == '__main__':
     setup(
         **setup_args,
-        install_requires=['maxvolpy', 'numpy', 'scipy'],
+        # Please, install it manually:
+        # install_requires=['numpy', 'scipy', 'maxvolpy'],
         include_package_data=True)
