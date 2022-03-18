@@ -74,7 +74,7 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None):
     Y0, R = ttopt_init(n, rmax, Y0, with_rank=True)
 
     # Selected multi-indices for all unfolding matrices:
-    J = [np.empty(0, dtype=int)] * (d + 1)
+    J = [None] * (d + 1)
     for i in range(d - 1):
         G = Y0[i].reshape(-1, Y0[i].shape[-1])
         q, r = np.linalg.qr(G)
@@ -203,23 +203,21 @@ def _maxvol_rect(a, kickrank=1, rf=1, tol=1.):
 
 
 def _merge(J1, J2, Jg):
-    n = Jg.size
-    r1 = J1.shape[0] or 1
-    r2 = J2.shape[0] or 1
+    n = Jg.shape[0]
+    r1 = J1.shape[0] if J1 is not None else 1
+    r2 = J2.shape[0] if J2 is not None else 1
 
-    if np.size(J1) == 0:
-        w1 = _zeros(r1 * n * r2)
-    else:
-        w1 = np.kron(_ones(n * r2), J1)
+    I = np.kron(np.kron(_ones(r2), Jg), _ones(r1))
 
-    w2 = np.kron(np.kron(_ones(r2), Jg), _ones(r1))
+    if J1 is not None:
+        J1_ = np.kron(_ones(n * r2), J1)
+        I = np.hstack((J1_, I))
 
-    if np.size(J2) == 0:
-        w3 = _zeros(r1 * n * r2)
-    else:
-        w3 = np.kron(J2, _ones(r1 * n))
+    if J2 is not None:
+        J2_ = np.kron(J2, _ones(r1 * n))
+        I = np.hstack((I, J2_))
 
-    return np.hstack((w1, w2, w3))
+    return I
 
 
 def _ones(k, m=1):
@@ -230,21 +228,17 @@ def _reshape(a, shape):
     return np.reshape(a, shape, order='F')
 
 
-def _stack(J0, Jg, ind, l2r=True):
-    r = J0.shape[0] or 1
+def _stack(J, Jg, ind, l2r=True):
     n = Jg.shape[0]
+    r = J.shape[0] if J is not None else 1
 
-    if l2r:
-        J1 = np.kron(_ones(n), J0)
-        J2 = np.kron(Jg, _ones(r))
-    else:
-        J1 = np.kron(_ones(r), Jg)
-        J2 = _zeros(n * r) if np.size(J0) == 0 else np.kron(J0, _ones(n))
+    J_new = np.kron(Jg, _ones(r)) if l2r else np.kron(_ones(r), Jg)
 
-    J = np.hstack((J1, J2))
+    if J is not None:
+        J_old = np.kron(_ones(n), J) if l2r else np.kron(J, _ones(n))
+        J_new = np.hstack((J_old, J_new)) if l2r else np.hstack((J_new, J_old))
 
-    J = _reshape(J, (r * n, -1))
-    return J[ind, :]
+    return J_new[ind, :]
 
 
 def _zeros(k, m=0):
