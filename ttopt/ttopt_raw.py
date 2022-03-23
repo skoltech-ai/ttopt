@@ -132,8 +132,9 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
             Z = _reshape(Z, (R[i] * n[i], R[i + 1]))
             q, r = np.linalg.qr(Z)
             ind = _maxvol_rect(q)
-            R[i + 1] = ind.size
             J[i + 1] = _stack(J[i], J_grid[i], ind, l2r=True)
+            J[i + 1] = np.vstack((J[i + 1], i_min[:(i+1)].reshape(1, -1)))
+            R[i + 1] = ind.size + 1
         if direction < 0 and i > 0:
             # This is right to left sweep:
             Z = _reshape(Z, (R[i], n[i] * R[i + 1])).T
@@ -141,8 +142,9 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
             R[i] = min(R[i], rmax)
             q = q[:, :R[i]]
             ind = _maxvol_rect(q)
-            R[i] = ind.size
             J[i] = _stack(J[i+1], J_grid[i], ind, l2r=False)
+            J[i] = np.vstack((J[i], i_min[i:].reshape(1, -1)))
+            R[i] = ind.size + 1
 
         # We update the current core index according to the traversal direction
         # (when we go through the first or the latest core, then we inverse the
