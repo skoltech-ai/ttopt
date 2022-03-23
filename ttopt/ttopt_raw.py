@@ -10,7 +10,7 @@ Note:
     used. It provides a set of methods for discretizing the function, caching
     previously requested values and logging intermediate results. In this case,
     a wrapper "TTOpt.comp_min" should be passed to the function "ttopt" as its
-    first argument.
+    first argument (the method "TTOpt.minimize" provides the related interface).
 
 """
 from maxvolpy.maxvol import maxvol
@@ -18,7 +18,7 @@ from maxvolpy.maxvol import rect_maxvol
 import numpy as np
 
 
-def ttopt(f, n, rmax=5, evals=None, Y0=None):
+def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
     """Find the minimum element of the implicitly given multidimensional array.
 
     This function computes the minimum of the implicitly given d-dimensional
@@ -26,39 +26,42 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None):
     approximation and the cross-maximum-volume principle are used.
 
     Args:
-        f (function): The function that returns tensor values for the given set
+        f (function): the function that returns tensor values for the given set
             of the indices. Its arguments are (I, i_min, y_min, opt_min), where
-            I represents several multi-indices (samples) for calculation (is 2D
-            numpy array of the shape [samples, d]), i_min represents the
-            current multi-index of argmin approximation (is 1D numpy array of
-            the shape [d]; while the first call it will be None), y_min
-            represents the current approximated minimum of the tensor (is
-            float; while the first call it will be None) and opt_min is the
-            value of the auxiliary quantity corresponding to the multi-index
-            i_min (it is used for debugging and in specific parallel
-            calculations). The output of the function should be the
-            corresponding values in the given indices (1D numpy array of the
-            shape [samples]) and related values of the auxiliary quantities at
-            the requested points (1D numpy array of the shape [samples] of any).
-            If the function returns None instead of the tensor values, then the
-            algorithm will be interrupted and the current approximation will be
-            returned.
-        n (list of len d of int): Number of grid points for every dimension
+            "I" represents several multi-indices (samples) for calculation (it
+            is 2D np.ndarray of the shape [samples, dimensions]), "i_min"
+            represents the current multi-index of the argmin approximation (it
+            is 1D np.ndarray of the shape [dimensions]; note that while the
+            first call it will be None), "y_min" represents the current
+            approximated minimum of the tensor (it is float; note that while
+            the first call it will be None) and "opt_min" is the value of the
+            auxiliary quantity corresponding to the multi-index "i_min" (it is
+            used for debugging and in specific parallel calculations). The
+            output of the function should be the corresponding values in the
+            given indices (1D np.ndarray of the shape [samples]) and related
+            values of the auxiliary quantities at the requested points (1D
+            np.ndarray of the shape [samples] of any). If the function returns
+            None instead of the tensor values, then the algorithm will be
+            interrupted and the current approximation will be returned.
+        n (list of len d of int): number of grid points for every dimension
             (i.e., the shape of the tensor). Note that the tensor must have a
             dimension of at least 2.
-        rmax (int): Maximum rank.
-        evals (int or float): Number of available calls to function. If it is
-            None, then the algorithm will run until the target function returns
-            a None instead of the y-value.
+        rmax (int): maximum used rank for undolding matrices.
+        evals (int or float): number of available calls to function (i.e.,
+            computational budget). If it is None, then the algorithm will run
+            until the target function returns a None instead of the y-value.
         Y0 (list of 3D np.ndarrays): optional initial tensor in the TT-format
-            (it should be represented as a list of the TT-cores). If not
-            specified, then a random TT-tensor with TT-rank rmax will be used.
+            (it should be represented as a list of the TT-cores). If it is not
+            specified, then a random TT-tensor with TT-rank "rmax" will be used.
+        fs_opt (float): the parameter of the smoothing function. If it is None,
+            then "arctan" function will be used. Otherwise, the function
+            "exp(-1 * fs_opt *(p - p0))" will be used.
 
     Returns:
-        [np.ndarray, float]: The multi-index that gives the minimum value of the
-        tensor (is 1D numpy array of length d of int; "i_min") and the minimum
-        value of the tensor (is float; "y_min") that corresponds to the
-        multi-index "i_min".
+        [np.ndarray, float]: the multi-index that gives the minimum value of the
+        tensor (it is 1D np.ndarray of length "d" of int; i.e., "i_min") and
+        the minimum value of the tensor (it is float; i.e., "y_min") that
+        corresponds to the multi-index "i_min".
 
     """
     # Number of dimensions:
@@ -121,7 +124,7 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None):
 
         # We transform sampled points into "core tensor" and smooth it out:
         Z = _reshape(y, (R[i], n[i], R[i + 1]))
-        Z = ttopt_fs(Z, y_min)
+        Z = ttopt_fs(Z, y_min, fs_opt)
 
         # We update ranks and points of interest according to the "core tensor":
         if direction > 0 and i < d - 1:
@@ -164,10 +167,12 @@ def ttopt_find(I, y, opt, i_min, y_min, opt_min):
     return I[ind, :], y_min_curr, opt[ind]
 
 
-def ttopt_fs(p, p0=0.):
+def ttopt_fs(p, p0=0., opt=None):
     """Smooth function that transforms max to min."""
-    # return np.exp(-10*(p - p0))
-    return np.pi/2 - np.arctan(p - p0)
+    if opt is None:
+        return np.pi/2 - np.arctan(p - p0)
+    else:
+        return np.exp(-1. * opt * (p - p0))
 
 
 def ttopt_init(n, rmax, Y0=None, with_rank=False):
@@ -188,17 +193,17 @@ def ttopt_init(n, rmax, Y0=None, with_rank=False):
         return Y0
 
 
-def _maxvol(a, tol=1.01, max_iters=100):
-    return maxvol(a, tol=tol, max_iters=max_iters)[0]
+def _maxvol(A, tol=1.01, max_iters=100):
+    return maxvol(A, tol=tol, max_iters=max_iters)[0]
 
 
-def _maxvol_rect(a, kickrank=1, rf=1, tol=1.):
+def _maxvol_rect(A, kickrank=1, rf=1, tol=1.):
     if kickrank is not None and rf is not None:
-        maxK = a.shape[1] + kickrank + rf
+        maxK = A.shape[1] + kickrank + rf
     else:
         maxK = None
 
-    return rect_maxvol(a, tol=tol, min_add_K=kickrank, maxK=maxK,
+    return rect_maxvol(A, tol=tol, min_add_K=kickrank, maxK=maxK,
         start_maxvol_iters=10, identity_submatrix=False)[0]
 
 
@@ -224,8 +229,8 @@ def _ones(k, m=1):
     return np.ones((k, m), dtype=int)
 
 
-def _reshape(a, shape):
-    return np.reshape(a, shape, order='F')
+def _reshape(A, n):
+    return np.reshape(A, n, order='F')
 
 
 def _stack(J, Jg, ind, l2r=True):
@@ -239,7 +244,3 @@ def _stack(J, Jg, ind, l2r=True):
         J_new = np.hstack((J_old, J_new)) if l2r else np.hstack((J_new, J_old))
 
     return J_new[ind, :]
-
-
-def _zeros(k, m=0):
-    return np.zeros((k, m), dtype=int)

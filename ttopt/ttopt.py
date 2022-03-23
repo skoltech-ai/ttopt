@@ -460,17 +460,20 @@ class TTOpt():
 
         return text
 
-    def minimize(self, rmax=10, Y0=None):
+    def minimize(self, rmax=10, Y0=None, fs_opt=None):
         """Perform the function minimization process by TT-based approach.
 
         Args:
-            rmax (int): Maximum TT-rank.
+            rmax (int): maximum TT-rank.
             Y0 (list of 3D np.ndarrays of float): optional initial tensor in
                 the TT format as a list of the TT-cores.
+            fs_opt (float): the parameter of the smoothing function. If it is
+                None, then "arctan" function will be used. Otherwise, the
+                function "exp(-1 * fs_opt *(p - p0))" will be used.
 
         """
         t_minim = tpc()
-        i_min, y_min = ttopt(self.comp_min, self.n, rmax, None, Y0)
+        i_min, y_min = ttopt(self.comp_min, self.n, rmax, None, Y0, fs_opt)
         self.t_minim = tpc() - t_minim
 
     def qtt_parse_many(self, I_qtt):
