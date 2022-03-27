@@ -4,6 +4,7 @@ from time import perf_counter as tpc
 
 from .ttopt_raw import ttopt
 from .ttopt_raw import ttopt_find
+from .ttopt_raw_old import ttopt as ttopt_old
 
 
 class TTOpt():
@@ -106,7 +107,7 @@ class TTOpt():
     def __init__(self, f, d, a=None, b=None, n=None, p=None, q=None,
         evals=None, name=None, callback=None, x_min_real=None, y_min_real=None,
         is_func=True, is_vect=True, with_cache=False, with_log=False,
-        with_opt=False):
+        with_opt=False, use_old=False, with_full_info=False):
         # The target function and its dimension:
         self.f = f
         self.d = int(d)
@@ -166,6 +167,8 @@ class TTOpt():
         self.with_cache = bool(with_cache)
         self.with_log = bool(with_log)
         self.with_opt = bool(with_opt)
+        self.use_old = bool(use_old)
+        self.with_full_info = bool(with_full_info)
 
         # Inner variables:
         self.cache = {}     # Cache for the results of requests to function
@@ -180,6 +183,7 @@ class TTOpt():
         self._opt = None    # Function opts related to its output
 
         # Approximations for argmin/min/opts of the function while iterations:
+        self.I_list = []
         self.i_min_list = []
         self.x_min_list = []
         self.y_min_list = []
@@ -394,6 +398,9 @@ class TTOpt():
         self.evals_min_list.append(self.k_evals_curr)
         self.cache_min_list.append(self.k_cache_curr)
 
+        if self.with_full_info:
+            self.I_list.append(I)
+
         is_better = len(self.y_min_list) == 1 or (y_min < self.y_min_list[-2])
         if self.callback and is_better:
             last = {'last': [x_min, y_min, i_min, opt_min, self.k_evals]}
@@ -473,7 +480,8 @@ class TTOpt():
 
         """
         t_minim = tpc()
-        i_min, y_min = ttopt(self.comp_min, self.n, rmax, None, Y0, fs_opt)
+        func = ttopt_old if self.use_old else ttopt
+        i_min, y_min = func(self.comp_min, self.n, rmax, None, Y0, fs_opt)
         self.t_minim = tpc() - t_minim
 
     def qtt_parse_many(self, I_qtt):
