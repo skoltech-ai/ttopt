@@ -2,7 +2,7 @@
 
 This module contains the main function "ttopt" that finds the approximate
 minimum of the given multidimensional array (tensor), which can represent a
-discretized multidimensional function.
+discretized multivariable function.
 
 Note:
     For the task of finding the extremum of a function of many variables or
@@ -14,8 +14,8 @@ Note:
 
 """
 from maxvolpy.maxvol import maxvol
-from maxvolpy.maxvol import rect_maxvol
 import numpy as np
+import teneva
 
 
 def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
@@ -46,7 +46,7 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
         n (list of len d of int): number of grid points for every dimension
             (i.e., the shape of the tensor). Note that the tensor must have a
             dimension of at least 2.
-        rmax (int): maximum used rank for undolding matrices.
+        rmax (int): maximum used rank for unfolding matrices.
         evals (int or float): number of available calls to function (i.e.,
             computational budget). If it is None, then the algorithm will run
             until the target function returns a None instead of the y-value.
@@ -55,7 +55,7 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
             specified, then a random TT-tensor with TT-rank "rmax" will be used.
         fs_opt (float): the parameter of the smoothing function. If it is None,
             then "arctan" function will be used. Otherwise, the function
-            "exp(-1 * fs_opt *(p - p0))" will be used.
+            "exp(-1 * fs_opt * (p - p0))" will be used.
 
     Returns:
         [np.ndarray, float]: the multi-index that gives the minimum value of the
@@ -71,31 +71,28 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
     evals = int(evals) if evals else None
 
     # Grid:
-    J_grid = [np.reshape(np.arange(k), (-1, 1)) for k in n]
+    Jg_list = [np.reshape(np.arange(k), (-1, 1)) for k in n]
 
     # Initial tensor:
-    Y0, R = ttopt_init(n, rmax, Y0, with_rank=True)
+    Y0, r = ttopt_init(n, rmax, Y0, with_rank=True)
 
-    # Selected multi-indices for all unfolding matrices:
-    J = [None] * (d + 1)
+    # Prepare initial multi-indices for all unfolding matrices:
+    J_list = [None] * (d + 1)
     for i in range(d - 1):
-        G = Y0[i].reshape(-1, Y0[i].shape[-1])
-        q, r = np.linalg.qr(G)
-        ind = _maxvol(q)
-        J[i + 1] = _stack(J[i], J_grid[i], ind, l2r=True)
+        J_list[i+1] = _iter(Y0[i], J_list[i], Jg_list[i], l2r=True)
 
     i_min = None         # Approximation of argmin for tensor
     y_min = None         # Approximation of min for tensor (float('inf'))
     opt_min = None       # Additional option related to i_min
 
-    eval = 0             # Number of performed calls to function:
+    eval = 0             # Number of performed calls to function
     iter = 0             # Iteration (sweep) number
     i = d - 1            # Index of the current core (0, 1, ..., d-1)
-    direction = -1       # Core traversal direction: right (+1) or left (-1)
+    l2r = False          # Core traversal direction (left <-> right)
 
     while True:
-        # We select sample points [samples, d]:
-        I = _merge(J[i], J[i+1], J_grid[i])
+        # We select multi-indices [samples, d], which will requested from func:
+        I = _merge(J_list[i], J_list[i+1], Jg_list[i])
 
         # We check if the maximum number of requests has been exceeded:
         eval_curr = I.shape[0]
@@ -108,13 +105,12 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
         # Function "f" can return None to interrupt the algorithm execution:
         if y is None:
             return i_min, y_min
-        else:
-            eval += y.size
 
         # We find and check the minimum value on a set of sampled points:
         i_min, y_min, opt_min = ttopt_find(I, y, opt, i_min, y_min, opt_min)
 
         # If the max number of requests exceeded, we interrupt the algorithm:
+        eval += y.size
         if evals is not None and eval >= evals:
             return i_min, y_min
 
@@ -123,37 +119,23 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
             return i_min, y_min
 
         # We transform sampled points into "core tensor" and smooth it out:
-        Z = _reshape(y, (R[i], n[i], R[i + 1]))
+        Z = _reshape(y, (r[i], n[i], r[i + 1]))
         Z = ttopt_fs(Z, y_min, fs_opt)
 
-        # We update ranks and points of interest according to the "core tensor":
-        if direction > 0 and i < d - 1:
-            # This is left to right sweep:
-            Z = _reshape(Z, (R[i] * n[i], R[i + 1]))
-            q, r = np.linalg.qr(Z)
-            ind = _maxvol_rect(q)
-            J[i + 1] = _stack(J[i], J_grid[i], ind, l2r=True)
-            J[i + 1] = np.vstack((J[i + 1], i_min[:(i+1)].reshape(1, -1)))
-            R[i + 1] = ind.size + 1
-        if direction < 0 and i > 0:
-            # This is right to left sweep:
-            Z = _reshape(Z, (R[i], n[i] * R[i + 1])).T
-            q, r = np.linalg.qr(Z)
-            R[i] = min(R[i], rmax)
-            q = q[:, :R[i]]
-            ind = _maxvol_rect(q)
-            J[i] = _stack(J[i+1], J_grid[i], ind, l2r=False)
-            J[i] = np.vstack((J[i], i_min[i:].reshape(1, -1)))
-            R[i] = ind.size + 1
+        # We perform iteration:
+        if l2r and i < d - 1:
+            J_list[i+1] = _iter(Z, J_list[i], Jg_list[i], l2r)
+            J_list[i+1] = _add_row(J_list[i+1], i_min[:(i+1)])
+            # J_list[i+1] = _add_random(J_list[i+1], n[:(i+1)])
+            r[i+1] = J_list[i+1].shape[0]
+        if not l2r and i > 0:
+            J_list[i] = _iter(Z, J_list[i+1], Jg_list[i], l2r)
+            J_list[i] = _add_row(J_list[i], i_min[i:])
+            # J_list[i] = _add_random(J_list[i], n[i:])
+            r[i] = J_list[i].shape[0]
 
-        # We update the current core index according to the traversal direction
-        # (when we go through the first or the latest core, then we inverse the
-        # traversal direction and increment the iteration counter):
-        i += direction
-        if i == -1 or i == d:
-            iter += 1
-            direction = -direction
-            i += direction
+        # We update the current core index:
+        i, iter, l2r = _update_iter(d, i, iter, l2r)
 
     return i_min, y_min
 
@@ -169,50 +151,72 @@ def ttopt_find(I, y, opt, i_min, y_min, opt_min):
     return I[ind, :], y_min_curr, opt[ind]
 
 
-def ttopt_fs(p, p0=0., opt=None):
+def ttopt_fs(y, y0=0., opt=None):
     """Smooth function that transforms max to min."""
     if opt is None:
-        return np.pi/2 - np.arctan(p - p0)
+        return np.pi/2 - np.arctan(y - y0)
     else:
-        return np.exp(-1. * opt * (p - p0))
+        return np.exp(opt * (y0 - y))
 
 
 def ttopt_init(n, rmax, Y0=None, with_rank=False):
     """Build initial approximation for the main algorithm."""
     d = len(n)
 
-    R = [1]
+    r = [1]
     for i in range(1, d):
-        R.append(min(rmax, n[i-1] * R[i-1]))
-    R.append(1)
+        r.append(min(rmax, n[i-1] * r[i-1]))
+    r.append(1)
 
     if Y0 is None:
-        Y0 = [np.random.randn(R[i], n[i], R[i + 1]) for i in range(d)]
+        Y0 = [np.random.randn(r[i], n[i], r[i + 1]) for i in range(d)]
 
     if with_rank:
-        return Y0, R
+        return Y0, r
     else:
         return Y0
 
 
-def _maxvol(A, tol=1.01, max_iters=100):
+def _add_random(J, n):
+    i_rnd = [np.random.choice(k) for k in n]
+    i_rnd = np.array(i_rnd, dtype=int)
+    J_new = np.vstack((J, i_rnd.reshape(1, -1)))
+    return J_new
+
+
+def _add_row(J, i_new):
+    J_new = np.vstack((J, i_new.reshape(1, -1)))
+    return J_new
+
+
+def _iter(Z, J, Jg, l2r=True):
+    r1, n, r2 = Z.shape
+
+    Z = _reshape(Z, (r1 * n, r2)) if l2r else _reshape(Z, (r1, n * r2)).T
+
+    Q, R = np.linalg.qr(Z)
+    ind = _maxvol(Q)
+
+    J_new = _stack(J, Jg, l2r)
+    J_new = J_new[ind, :]
+
+    return J_new
+
+
+def _maxvol(A, tol=1.001, max_iters=1000):
+    if False:
+        n, r = A.shape
+        i_rnd = [np.random.choice(n) for _ in range(r)]
+        i_rnd = np.array(i_rnd, dtype=int)
+        return i_rnd
+
     return maxvol(A, tol=tol, max_iters=max_iters)[0]
 
 
-def _maxvol_rect(A, kickrank=1, rf=1, tol=1.):
-    if kickrank is not None and rf is not None:
-        maxK = A.shape[1] + kickrank + rf
-    else:
-        maxK = None
-
-    return rect_maxvol(A, tol=tol, min_add_K=kickrank, maxK=maxK,
-        start_maxvol_iters=10, identity_submatrix=False)[0]
-
-
 def _merge(J1, J2, Jg):
-    n = Jg.shape[0]
     r1 = J1.shape[0] if J1 is not None else 1
     r2 = J2.shape[0] if J2 is not None else 1
+    n = Jg.shape[0]
 
     I = np.kron(np.kron(_ones(r2), Jg), _ones(r1))
 
@@ -235,9 +239,9 @@ def _reshape(A, n):
     return np.reshape(A, n, order='F')
 
 
-def _stack(J, Jg, ind, l2r=True):
-    n = Jg.shape[0]
+def _stack(J, Jg, l2r=True):
     r = J.shape[0] if J is not None else 1
+    n = Jg.shape[0]
 
     J_new = np.kron(Jg, _ones(r)) if l2r else np.kron(_ones(r), Jg)
 
@@ -245,4 +249,15 @@ def _stack(J, Jg, ind, l2r=True):
         J_old = np.kron(_ones(n), J) if l2r else np.kron(J, _ones(n))
         J_new = np.hstack((J_old, J_new)) if l2r else np.hstack((J_new, J_old))
 
-    return J_new[ind, :]
+    return J_new
+
+
+def _update_iter(d, i, iter, l2r):
+    i += 1 if l2r else -1
+
+    if i == -1 or i == d:
+        iter += 1
+        l2r = not l2r
+        i += 1 if l2r else -1
+
+    return i, iter, l2r
