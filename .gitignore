@@ -16,3 +16,4 @@ build/
 dist/
 comp/
 tt_rl_solver/
+check/animation
