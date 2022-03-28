@@ -27,7 +27,7 @@ def ttopt_animate(func, tto, frames=None, fpath=None):
     ax2 = fig.add_subplot(122)
 
     title = func.name + ' function'
-    title += f'| y_min={tto.y_min_real}'
+    title += f' | y_min={tto.y_min_real}'
     title += f' | n = {tto.n}' if tto.p is None else f' | n = {tto.p}^{tto.q}'
     ax1.set_title(title, fontsize=16)
 

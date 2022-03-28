@@ -205,6 +205,7 @@ def _iter(Z, J, Jg, l2r=True):
 
 def _maxvol(A, tol=1.001, max_iters=1000):
     if False:
+        # Test (replacement of maxvol by random indices):
         n, r = A.shape
         i_rnd = [np.random.choice(n) for _ in range(r)]
         i_rnd = np.array(i_rnd, dtype=int)

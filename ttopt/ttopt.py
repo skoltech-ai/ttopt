@@ -95,6 +95,10 @@ class TTOpt():
             opts related to output y (scalar or vector) as second argument
             (it will be also saved and passed to "callback" function). It is
             False by default.
+        use_old (bool): If flag is True, then old TTOpt algorithm will be used.
+        with_full_info (bool): If flag is True, then the full information will
+            be saved, including multi-indices of requested points (it is used
+            by animation function).
 
     Note:
         Call "calc" to evaluate function for one tensor multi-index and call
