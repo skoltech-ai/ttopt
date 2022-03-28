@@ -15,7 +15,6 @@ Note:
 """
 from maxvolpy.maxvol import maxvol
 import numpy as np
-import teneva
 
 
 def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
