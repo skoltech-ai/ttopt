@@ -19,7 +19,7 @@ class TTOpt():
     results) are supported.
 
     Args:
-        f (function): The function of interest. Its argument X should represent
+        f (function): the function of interest. Its argument X should represent
             several spatial points for calculation (is 2D numpy array of the
             shape [samples, d]) if "is_vect" flag is True, and it is one
             spatial point for calculation (is 1D numpy array of the shape [d])
@@ -36,67 +36,67 @@ class TTOpt():
             requested points (it is used for debugging and in specific parallel
             calculations; the value of this auxiliary quantity related to the
             "argmin" point will be passed to "callback" function).
-        d (int): Number of function dimensions.
-        a (float or list of len d of float): Grid lower bounds for every
+        d (int): number of function dimensions.
+        a (float or list of len d of float): grid lower bounds for every
             dimension. If a number is given, then this value will be used for
             each dimension.
-        b (float or list of len d of float): Grid upper bounds for every
+        b (float or list of len d of float): grid upper bounds for every
             dimension. If a number is given, then this value will be used for
             each dimension.
-        n (int or list of len d of int): Number of grid points for every
+        n (int or list of len d of int): number of grid points for every
             dimension. If a number is given, then this value will be used for
             each dimension. If this parameter is not specified, then instead of
             it the values for both "p" and "q" should be set.
-        p (int): The grid size factor (if is given, then there will be n=p^q
+        p (int): the grid size factor (if is given, then there will be n=p^q
             points for each dimension). This parameter can be specified instead
             of "n". If this parameter is specified, then the parameter "q" must
             also be specified, and in this case the QTT-based approach will be
             used.
-        q (int): The grid size factor (if is given, then there will be n=p^q
+        q (int): the grid size factor (if is given, then there will be n=p^q
             points for each dimension). This parameter can be specified instead
             of "n". If this parameter is specified, then the parameter "p" must
             also be specified, and in this case the QTT-based approach will be
             used.
-        evals (int or float): The number of requests to the target function
+        evals (int or float): the number of requests to the target function
             that will be made.
-        name (str): Optional display name for the function of interest. It is
+        name (str): optional display name for the function of interest. It is
             the empty string by default.
-        callback (function): Optional function that will be called after each
+        callback (function): optional function that will be called after each
             optimization step (in Func.comp.min) with related info (it is used
             for debugging and in specific parallel calculations).
-        x_min_real (list of len d): Optional real value of x-minima (x). If
+        x_min_real (list of len d): optional real value of x-minima (x). If
             this value is specified, then it will be used to display the
             current approximation error within the algorithm iterations (this
             is convenient for debugging and testing/research).
-        y_min_real (float): Optional real value of y-minima (y=f(x)). If
+        y_min_real (float): optional real value of y-minima (y=f(x)). If
             this value is specified, then it will be used to display the
             current approximation error within the algorithm iterations (this
             is convenient for debugging and testing/research).
-        is_func (bool): If flag is True, then we minimize the function (the
+        is_func (bool): if flag is True, then we minimize the function (the
             arguments of f correspond to continuous spatial points), otherwise
             we approximate the tensor (the arguments of f correspond to
             discrete multidimensional tensor indices). It is True by default.
-        is_vect (bool): If flag is True, then function should accept 2D
+        is_vect (bool): if flag is True, then function should accept 2D
             numpy array of the shape [samples, d] (batch of points or indices)
             and return 1D numpy array of the shape [samples]. Otherwise, the
             function should accept 1D numpy array (one multidimensional point)
             and return the float value. It is True by default.
-        with_cache (bool): If flag is True, then all requested values are
+        with_cache (bool): if flag is True, then all requested values are
             stored and retrieved from the storage upon repeated requests.
             Note that this leads to faster computation if one point is
             computed for a long time. On the other hand, this can in some
             cases slow down the process, due to the additional time spent
             on checking the storage and using unvectorized slow loops in
             python. It is False by default.
-        with_log (bool): If flag is True, then text messages will be
+        with_log (bool): if flag is True, then text messages will be
             displayed during the optimizer query process. It is False by
             default.
-        with_opt (bool): If flag is True, then function of interest returns
+        with_opt (bool): if flag is True, then function of interest returns
             opts related to output y (scalar or vector) as second argument
             (it will be also saved and passed to "callback" function). It is
             False by default.
-        use_old (bool): If flag is True, then old TTOpt algorithm will be used.
-        with_full_info (bool): If flag is True, then the full information will
+        use_old (bool): if flag is True, then old TTOpt algorithm will be used.
+        with_full_info (bool): if flag is True, then the full information will
             be saved, including multi-indices of requested points (it is used
             by animation function).
 
@@ -108,10 +108,7 @@ class TTOpt():
 
     """
 
-    def __init__(self, f, d, a=None, b=None, n=None, p=None, q=None,
-        evals=None, name=None, callback=None, x_min_real=None, y_min_real=None,
-        is_func=True, is_vect=True, with_cache=False, with_log=False,
-        with_opt=False, use_old=False, with_full_info=False):
+    def __init__(self, f, d, a=None, b=None, n=None, p=None, q=None, evals=None, name=None, callback=None, x_min_real=None, y_min_real=None, is_func=True, is_vect=True, with_cache=False, with_log=False, with_opt=False, use_old=False, with_full_info=False):
         # The target function and its dimension:
         self.f = f
         self.d = int(d)
@@ -125,8 +122,8 @@ class TTOpt():
             if is_func:
                 raise ValueError('Grid lower bound (a) should be set')
             self.a = None
-        if self.a is not None:
-            assert self.a.size == self.d
+        if self.a is not None and self.a.size != self.d:
+            raise ValueError('Grid lower bound (a) has invalid shape')
 
         # Set grid upper bound:
         if isinstance(b, (int, float)):
@@ -137,8 +134,8 @@ class TTOpt():
             if is_func:
                 raise ValueError('Grid upper bound (b) should be set')
             self.b = None
-        if self.b is not None:
-            assert self.b.size == self.d
+        if self.b is not None and self.b.size != self.d:
+            raise ValueError('Grid upper bound (b) has invalid shape')
 
         # Set number of grid points:
         if n is None:
@@ -158,7 +155,8 @@ class TTOpt():
             else:
                 self.n = np.asanyarray(n, dtype=int)
             self.n_func = self.n.copy()
-        assert self.n_func.size == self.d
+        if self.n_func.size != self.d:
+            raise ValueError('Grid size (n/p/q) has invalid shape')
 
         # Set other options according to the input arguments:
         self.evals = int(evals) if evals else None
@@ -246,11 +244,11 @@ class TTOpt():
         """Calculate the function for the given multiindex.
 
         Args:
-            i (np.ndarray): The input for the function, that is 1D numpy array
+            i (np.ndarray): the input for the function, that is 1D numpy array
                 of the shape [d] of int (indices).
 
         Returns:
-            float: The output of the function.
+            float: the output of the function.
 
         """
         self.k_cache_curr = 0
@@ -282,14 +280,14 @@ class TTOpt():
         return y
 
     def comp(self, I):
-        """Compute the function for the set of multi indices (samples).
+        """Compute the function for the set of multi-indices (samples).
 
         Args:
-            I (np.ndarray): The inputs for the function, that are collected in
+            I (np.ndarray): the inputs for the function, that are collected in
                 2D numpy array of the shape [samples, d] of int (indices).
 
         Returns:
-            np.ndarray: The outputs of the function, that are collected in
+            np.ndarray: the outputs of the function, that are collected in
             1D numpy array of the shape [samples].
 
         Note:
@@ -348,9 +346,6 @@ class TTOpt():
         approximation of the argmin (i_min), the corresponding value (y_min)
         and related option value (opt_min).
 
-        Todo:
-            Update callback args.
-
         """
         # We return None if the limit for function requests is exceeded:
         if self.evals is not None and self.k_evals >= self.evals:
@@ -395,15 +390,15 @@ class TTOpt():
         else:
             x_min = i_min.copy()
 
+        if self.with_full_info:
+            self.I_list.append(I)
+
         self.i_min_list.append(i_min.copy())
         self.x_min_list.append(x_min)
         self.y_min_list.append(y_min)
         self.opt_min_list.append(opt_min)
         self.evals_min_list.append(self.k_evals_curr)
         self.cache_min_list.append(self.k_cache_curr)
-
-        if self.with_full_info:
-            self.I_list.append(I)
 
         is_better = len(self.y_min_list) == 1 or (y_min < self.y_min_list[-2])
         if self.callback and is_better:
@@ -416,27 +411,17 @@ class TTOpt():
         return Y, self._opt
 
     def i2s(self, i):
-        """Transforms array of int like [1, 2, 3] into string like '1-2-3'."""
+        """Transform array of int like [1, 2, 3] into string like '1-2-3'."""
         return '-'.join([str(v) for v in i])
 
     def i2x(self, i):
-        """Transforms multiindex into point of the uniform grid.
-
-        Todo:
-            We can add support for nonuniform grids.
-
-        """
+        """Transform multiindex into point of the uniform grid."""
         t = i * 1. / (self.n_func - 1)
         x = t * (self.b - self.a) + self.a
         return x
 
     def i2x_many(self, I):
-        """Transforms multiindices (samples) into grid points.
-
-        Todo:
-            We can add support for nonuniform grids.
-
-        """
+        """Transform multiindices (samples) into grid points."""
         A = np.repeat(self.a.reshape((1, -1)), I.shape[0], axis=0)
         B = np.repeat(self.b.reshape((1, -1)), I.shape[0], axis=0)
         N = np.repeat(self.n_func.reshape((1, -1)), I.shape[0], axis=0)
@@ -489,7 +474,7 @@ class TTOpt():
         self.t_minim = tpc() - t_minim
 
     def qtt_parse_many(self, I_qtt):
-        """Transforms tensor indices from QTT (long) to base (short) format."""
+        """Transform tensor indices from QTT (long) to base (short) format."""
         samples = I_qtt.shape[0]
         n_qtt = [self.n[0]]*self.q
         I = np.zeros((samples, self.d))
