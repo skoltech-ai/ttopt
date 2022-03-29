@@ -1,0 +1,618 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ttopt.ttopt &#8212; ttopt  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for ttopt.ttopt</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">perf_counter</span> <span class="k">as</span> <span class="n">tpc</span>
+
+
+<span class="kn">from</span> <span class="nn">.ttopt_raw</span> <span class="kn">import</span> <span class="n">ttopt</span>
+<span class="kn">from</span> <span class="nn">.ttopt_raw</span> <span class="kn">import</span> <span class="n">ttopt_find</span>
+<span class="kn">from</span> <span class="nn">.ttopt_raw_old</span> <span class="kn">import</span> <span class="n">ttopt</span> <span class="k">as</span> <span class="n">ttopt_old</span>
+
+
+<div class="viewcode-block" id="TTOpt"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt">[docs]</a><span class="k">class</span> <span class="nc">TTOpt</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Multidimensional minimizer based on the cross-maximum-volume principle.</span>
+
+<span class="sd">    Class for computation of the minimum for the implicitly given d-dimensional</span>
+<span class="sd">    array (tensor) or a function of d-dimensional argument. An adaptive method</span>
+<span class="sd">    based on the tensor train (TT) approximation and the cross-maximum volume</span>
+<span class="sd">    principle is used. Cache of requested values (its usage leads to faster</span>
+<span class="sd">    computation if one point is computed for a long time) and QTT-based</span>
+<span class="sd">    representation of the grid (its usage in many cases leads to more accurate</span>
+<span class="sd">    results) are supported.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        f (function): the function of interest. Its argument X should represent</span>
+<span class="sd">            several spatial points for calculation (is 2D numpy array of the</span>
+<span class="sd">            shape [samples, d]) if &quot;is_vect&quot; flag is True, and it is one</span>
+<span class="sd">            spatial point for calculation (is 1D numpy array of the shape [d])</span>
+<span class="sd">            in the case if &quot;is_vect&quot; flag is False. For the case of the tensor</span>
+<span class="sd">            approximation (if &quot;is_func&quot; flag is False), the argument X relates</span>
+<span class="sd">            to the one or many (depending on the value of the flag &quot;is_vect&quot;)</span>
+<span class="sd">            multi-indices of the corresponding array/tensor. Function should</span>
+<span class="sd">            return the values in the requested points (is 1D numpy array of the</span>
+<span class="sd">            shape [samples] of float or only one float value depending on the</span>
+<span class="sd">            value of &quot;is_vect&quot; flag). If &quot;with_opt&quot; flag is True, then function</span>
+<span class="sd">            should also return the second argument (is 1D numpy array of the</span>
+<span class="sd">            shape [samples] of any or just one value depending on the &quot;is_vect&quot;</span>
+<span class="sd">            flag) which is the auxiliary quantity corresponding to the</span>
+<span class="sd">            requested points (it is used for debugging and in specific parallel</span>
+<span class="sd">            calculations; the value of this auxiliary quantity related to the</span>
+<span class="sd">            &quot;argmin&quot; point will be passed to &quot;callback&quot; function).</span>
+<span class="sd">        d (int): number of function dimensions.</span>
+<span class="sd">        a (float or list of len d of float): grid lower bounds for every</span>
+<span class="sd">            dimension. If a number is given, then this value will be used for</span>
+<span class="sd">            each dimension.</span>
+<span class="sd">        b (float or list of len d of float): grid upper bounds for every</span>
+<span class="sd">            dimension. If a number is given, then this value will be used for</span>
+<span class="sd">            each dimension.</span>
+<span class="sd">        n (int or list of len d of int): number of grid points for every</span>
+<span class="sd">            dimension. If a number is given, then this value will be used for</span>
+<span class="sd">            each dimension. If this parameter is not specified, then instead of</span>
+<span class="sd">            it the values for both &quot;p&quot; and &quot;q&quot; should be set.</span>
+<span class="sd">        p (int): the grid size factor (if is given, then there will be n=p^q</span>
+<span class="sd">            points for each dimension). This parameter can be specified instead</span>
+<span class="sd">            of &quot;n&quot;. If this parameter is specified, then the parameter &quot;q&quot; must</span>
+<span class="sd">            also be specified, and in this case the QTT-based approach will be</span>
+<span class="sd">            used.</span>
+<span class="sd">        q (int): the grid size factor (if is given, then there will be n=p^q</span>
+<span class="sd">            points for each dimension). This parameter can be specified instead</span>
+<span class="sd">            of &quot;n&quot;. If this parameter is specified, then the parameter &quot;p&quot; must</span>
+<span class="sd">            also be specified, and in this case the QTT-based approach will be</span>
+<span class="sd">            used.</span>
+<span class="sd">        evals (int or float): the number of requests to the target function</span>
+<span class="sd">            that will be made.</span>
+<span class="sd">        name (str): optional display name for the function of interest. It is</span>
+<span class="sd">            the empty string by default.</span>
+<span class="sd">        callback (function): optional function that will be called after each</span>
+<span class="sd">            optimization step (in Func.comp.min) with related info (it is used</span>
+<span class="sd">            for debugging and in specific parallel calculations).</span>
+<span class="sd">        x_min_real (list of len d): optional real value of x-minima (x). If</span>
+<span class="sd">            this value is specified, then it will be used to display the</span>
+<span class="sd">            current approximation error within the algorithm iterations (this</span>
+<span class="sd">            is convenient for debugging and testing/research).</span>
+<span class="sd">        y_min_real (float): optional real value of y-minima (y=f(x)). If</span>
+<span class="sd">            this value is specified, then it will be used to display the</span>
+<span class="sd">            current approximation error within the algorithm iterations (this</span>
+<span class="sd">            is convenient for debugging and testing/research).</span>
+<span class="sd">        is_func (bool): if flag is True, then we minimize the function (the</span>
+<span class="sd">            arguments of f correspond to continuous spatial points), otherwise</span>
+<span class="sd">            we approximate the tensor (the arguments of f correspond to</span>
+<span class="sd">            discrete multidimensional tensor indices). It is True by default.</span>
+<span class="sd">        is_vect (bool): if flag is True, then function should accept 2D</span>
+<span class="sd">            numpy array of the shape [samples, d] (batch of points or indices)</span>
+<span class="sd">            and return 1D numpy array of the shape [samples]. Otherwise, the</span>
+<span class="sd">            function should accept 1D numpy array (one multidimensional point)</span>
+<span class="sd">            and return the float value. It is True by default.</span>
+<span class="sd">        with_cache (bool): if flag is True, then all requested values are</span>
+<span class="sd">            stored and retrieved from the storage upon repeated requests.</span>
+<span class="sd">            Note that this leads to faster computation if one point is</span>
+<span class="sd">            computed for a long time. On the other hand, this can in some</span>
+<span class="sd">            cases slow down the process, due to the additional time spent</span>
+<span class="sd">            on checking the storage and using unvectorized slow loops in</span>
+<span class="sd">            python. It is False by default.</span>
+<span class="sd">        with_log (bool): if flag is True, then text messages will be</span>
+<span class="sd">            displayed during the optimizer query process. It is False by</span>
+<span class="sd">            default.</span>
+<span class="sd">        with_opt (bool): if flag is True, then function of interest returns</span>
+<span class="sd">            opts related to output y (scalar or vector) as second argument</span>
+<span class="sd">            (it will be also saved and passed to &quot;callback&quot; function). It is</span>
+<span class="sd">            False by default.</span>
+<span class="sd">        use_old (bool): if flag is True, then old TTOpt algorithm will be used.</span>
+<span class="sd">        with_full_info (bool): if flag is True, then the full information will</span>
+<span class="sd">            be saved, including multi-indices of requested points (it is used</span>
+<span class="sd">            by animation function).</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        Call &quot;calc&quot; to evaluate function for one tensor multi-index and call</span>
+<span class="sd">        &quot;comp&quot; to evaluate function in the set of multi-indices (both of these</span>
+<span class="sd">        functions can be called regardless of the value of the flag &quot;is_vect&quot;).</span>
+<span class="sd">        Call &quot;minimize&quot; to find the global minimum of the function of interest.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">evals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x_min_real</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_min_real</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">is_func</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">is_vect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">with_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_log</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_opt</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_old</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_full_info</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="c1"># The target function and its dimension:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">f</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+
+        <span class="c1"># Set grid lower bound:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="n">a</span>
+        <span class="k">elif</span> <span class="n">a</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">is_func</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Grid lower bound (a) should be set&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Grid lower bound (a) has invalid shape&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Set grid upper bound:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="n">b</span>
+        <span class="k">elif</span> <span class="n">b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">is_func</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Grid upper bound (b) should be set&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Grid upper bound (b) has invalid shape&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Set number of grid points:</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">p</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">q</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If n is not set, then p and q should be set&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_func</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">p</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">q</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;If n is set, then p and q should be None&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_func</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Grid size (n/p/q) has invalid shape&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Set other options according to the input arguments:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">evals</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">evals</span><span class="p">)</span> <span class="k">if</span> <span class="n">evals</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">or</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callback</span> <span class="o">=</span> <span class="n">callback</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_min_real</span> <span class="o">=</span> <span class="n">x_min_real</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_min_real</span> <span class="o">=</span> <span class="n">y_min_real</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_func</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">is_func</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_vect</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">is_vect</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">with_cache</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">with_cache</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">with_log</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">with_log</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">with_opt</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">with_opt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_old</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">use_old</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">with_full_info</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">with_full_info</span><span class="p">)</span>
+
+        <span class="c1"># Inner variables:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="p">{}</span>     <span class="c1"># Cache for the results of requests to function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span> <span class="o">=</span> <span class="p">{}</span> <span class="c1"># Cache for the options while requests to function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_cache</span> <span class="o">=</span> <span class="mi">0</span>    <span class="c1"># Number of requests, then cache was used</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_cache_curr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span> <span class="o">=</span> <span class="mi">0</span>    <span class="c1"># Number of requests, then function was called</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_evals_curr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_evals</span> <span class="o">=</span> <span class="mf">0.</span>   <span class="c1"># Total time of function calls</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_total</span> <span class="o">=</span> <span class="mf">0.</span>   <span class="c1"># Total time of computations (including cache usage)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_minim</span> <span class="o">=</span> <span class="mi">0</span>    <span class="c1"># Total time of work for minimizator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span> <span class="o">=</span> <span class="kc">None</span>    <span class="c1"># Function opts related to its output</span>
+
+        <span class="c1"># Approximations for argmin/min/opts of the function while iterations:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">I_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i_min_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_min_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_min_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt_min_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">evals_min_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache_min_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">e_x</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Current error for approximation of argmin of the function.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_min_real</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_min</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_min</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_min_real</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">e_y</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Current error for approximation of the minumum of the function.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_min_real</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_min</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_min</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_min_real</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">i_min</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Current approximation of argmin (ind) of the function of interest.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">i_min_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">i_min_list</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">k_total</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Total number of requests (both function calls and cache usage).&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_cache</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">opt_min</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Current value of option of the function related to min-point.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">opt_min_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opt_min_list</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">t_evals_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Average time spent to real function call for 1 point.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">t_evals</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span> <span class="k">else</span> <span class="mf">0.</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">t_total_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Average time spent to return one function value.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">t_total</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_total</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_total</span> <span class="k">else</span> <span class="mf">0.</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">x_min</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Current approximation of argmin of the function of interest.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_min_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_min_list</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">y_min</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Current approximation of min of the function of interest.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_min_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_min_list</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="TTOpt.calc"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.calc">[docs]</a>    <span class="k">def</span> <span class="nf">calc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate the function for the given multiindex.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            i (np.ndarray): the input for the function, that is 1D numpy array</span>
+<span class="sd">                of the shape [d] of int (indices).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: the output of the function.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_cache_curr</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_vect</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">t_total</span> <span class="o">=</span> <span class="n">tpc</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_cache</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eval</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">t_total</span> <span class="o">+=</span> <span class="n">tpc</span><span class="p">()</span> <span class="o">-</span> <span class="n">t_total</span>
+            <span class="k">return</span> <span class="n">y</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">i2s</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eval</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="n">s</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">[</span><span class="n">s</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">k_cache_curr</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">k_cache</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_cache_curr</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_total</span> <span class="o">+=</span> <span class="n">tpc</span><span class="p">()</span> <span class="o">-</span> <span class="n">t_total</span>
+
+        <span class="k">return</span> <span class="n">y</span></div>
+
+<div class="viewcode-block" id="TTOpt.comp"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.comp">[docs]</a>    <span class="k">def</span> <span class="nf">comp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the function for the set of multi-indices (samples).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            I (np.ndarray): the inputs for the function, that are collected in</span>
+<span class="sd">                2D numpy array of the shape [samples, d] of int (indices).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: the outputs of the function, that are collected in</span>
+<span class="sd">            1D numpy array of the shape [samples].</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            The set of points (I) should not contain duplicate points. If it</span>
+<span class="sd">            contains duplicate points (that are not in the cache), then each of</span>
+<span class="sd">            them will be recalculated without using the cache.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_cache_curr</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_vect</span><span class="p">:</span>
+            <span class="n">Y</span><span class="p">,</span> <span class="n">_opt</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">I</span><span class="p">:</span>
+                <span class="n">Y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">calc</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+                <span class="n">_opt</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_opt</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span> <span class="o">=</span> <span class="n">_opt</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span>
+
+        <span class="n">t_total</span> <span class="o">=</span> <span class="n">tpc</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_cache</span><span class="p">:</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eval</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">t_total</span> <span class="o">+=</span> <span class="n">tpc</span><span class="p">()</span> <span class="o">-</span> <span class="n">t_total</span>
+            <span class="k">return</span> <span class="n">Y</span>
+
+        <span class="c1"># Requested points:</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+        <span class="c1"># Points that are not presented in the cache:</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">I</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">i2s</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_cache_curr</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_cache</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_cache_curr</span>
+
+        <span class="c1"># We add new points (J) to the storage:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">J</span><span class="p">):</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eval</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">J</span><span class="p">):</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">i2s</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">Z</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+
+        <span class="c1"># We obtain the values for requested points from the updated storage:</span>
+        <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">i2s</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">I</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">i2s</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">I</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_total</span> <span class="o">+=</span> <span class="n">tpc</span><span class="p">()</span> <span class="o">-</span> <span class="n">t_total</span>
+
+        <span class="k">return</span> <span class="n">Y</span></div>
+
+<div class="viewcode-block" id="TTOpt.comp_min"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.comp_min">[docs]</a>    <span class="k">def</span> <span class="nf">comp_min</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">i_min</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_min</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">opt_min</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the function for the set of points and save current minimum.</span>
+
+<span class="sd">        This helper function (this is wrapper for function &quot;comp&quot;) can be</span>
+<span class="sd">        passed to the optimizer. When making requests, the optimizer must pass</span>
+<span class="sd">        the grid points of interest (I) as arguments, as well as the current</span>
+<span class="sd">        approximation of the argmin (i_min), the corresponding value (y_min)</span>
+<span class="sd">        and related option value (opt_min).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># We return None if the limit for function requests is exceeded:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">evals</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">evals</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="c1"># We return None if the number of requests to the cache is 2 times</span>
+        <span class="c1"># higher than the number of requests to the function:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_cache</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_cache</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">evals</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_cache</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;!!! TTOpt warning : &#39;</span>
+                <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;the number of requests to the cache is 2 times higher &#39;</span>
+                <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;than the number of requests to the function. &#39;</span>
+                <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;The work is finished before max func-evals reached.&#39;</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+                <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="c1"># We truncate the list of requested points if it exceeds the limit:</span>
+        <span class="n">eval_curr</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">is_last</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">evals</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span><span class="o">+</span><span class="n">eval_curr</span><span class="o">&gt;=</span><span class="bp">self</span><span class="o">.</span><span class="n">evals</span>
+        <span class="k">if</span> <span class="n">is_last</span><span class="p">:</span>
+            <span class="n">I</span> <span class="o">=</span> <span class="n">I</span><span class="p">[:(</span><span class="bp">self</span><span class="o">.</span><span class="n">evals</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span><span class="p">),</span> <span class="p">:]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">:</span>
+            <span class="c1"># The QTT is used, hence we should transform the indices:</span>
+            <span class="k">if</span> <span class="n">I</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">I</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qtt_parse_many</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">i_min</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">i_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qtt_parse_many</span><span class="p">(</span><span class="n">i_min</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
+
+        <span class="c1"># If this is last iteration, we should &quot;manually&quot; check for y_opt_new:</span>
+        <span class="k">if</span> <span class="n">is_last</span><span class="p">:</span>
+            <span class="n">i_min</span><span class="p">,</span> <span class="n">y_min</span><span class="p">,</span> <span class="n">opt_min</span> <span class="o">=</span> <span class="n">ttopt_find</span><span class="p">(</span>
+                <span class="n">I</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span><span class="p">,</span> <span class="n">i_min</span><span class="p">,</span> <span class="n">y_min</span><span class="p">,</span> <span class="n">opt_min</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">i_min</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_func</span><span class="p">:</span>
+            <span class="n">x_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">i2x</span><span class="p">(</span><span class="n">i_min</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x_min</span> <span class="o">=</span> <span class="n">i_min</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_full_info</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">I_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">i_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i_min</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_min</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y_min</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">opt_min</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">evals_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k_evals_curr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k_cache_curr</span><span class="p">)</span>
+
+        <span class="n">is_better</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_min_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="p">(</span><span class="n">y_min</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_min_list</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">callback</span> <span class="ow">and</span> <span class="n">is_better</span><span class="p">:</span>
+            <span class="n">last</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;last&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">x_min</span><span class="p">,</span> <span class="n">y_min</span><span class="p">,</span> <span class="n">i_min</span><span class="p">,</span> <span class="n">opt_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span><span class="p">]}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span><span class="n">last</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_log</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">is_final</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">Y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span></div>
+
+<div class="viewcode-block" id="TTOpt.i2s"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.i2s">[docs]</a>    <span class="k">def</span> <span class="nf">i2s</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform array of int like [1, 2, 3] into string like &#39;1-2-3&#39;.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s1">&#39;-&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">i</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="TTOpt.i2x"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.i2x">[docs]</a>    <span class="k">def</span> <span class="nf">i2x</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform multiindex into point of the uniform grid.&quot;&quot;&quot;</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_func</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">t</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span>
+        <span class="k">return</span> <span class="n">x</span></div>
+
+<div class="viewcode-block" id="TTOpt.i2x_many"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.i2x_many">[docs]</a>    <span class="k">def</span> <span class="nf">i2x_many</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform multiindices (samples) into grid points.&quot;&quot;&quot;</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)),</span> <span class="n">I</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)),</span> <span class="n">I</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_func</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)),</span> <span class="n">I</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">I</span> <span class="o">*</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">T</span> <span class="o">*</span> <span class="p">(</span><span class="n">B</span> <span class="o">-</span> <span class="n">A</span><span class="p">)</span> <span class="o">+</span> <span class="n">A</span>
+        <span class="k">return</span> <span class="n">X</span></div>
+
+<div class="viewcode-block" id="TTOpt.info"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.info">[docs]</a>    <span class="k">def</span> <span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">with_e_x</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">with_e_y</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">is_final</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return text description of the progress of optimizer work.&quot;&quot;&quot;</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="si">}</span><span class="s1">d | &#39;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_cache</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;k=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span><span class="si">:</span><span class="s1">-8.2e</span><span class="si">}</span><span class="s1">+</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">k_cache</span><span class="si">:</span><span class="s1">-8.2e</span><span class="si">}</span><span class="s1"> | &#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;k=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">k_total</span><span class="si">:</span><span class="s1">-8.2e</span><span class="si">}</span><span class="s1"> | &#39;</span>
+
+        <span class="k">if</span> <span class="n">is_final</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;t_all=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">t_minim</span><span class="si">:</span><span class="s1">-8.2e</span><span class="si">}</span><span class="s1"> | &#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;t_cur=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">t_total</span><span class="si">:</span><span class="s1">-8.2e</span><span class="si">}</span><span class="s1"> | &#39;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_min_real</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_min</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;y=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">y_min</span><span class="si">:</span><span class="s1">-.6f</span><span class="si">}</span><span class="s1"> &#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">with_e_x</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">e_x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;e_x=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">e_x</span><span class="si">:</span><span class="s1">-8.2e</span><span class="si">}</span><span class="s1"> &#39;</span>
+            <span class="k">if</span> <span class="n">with_e_y</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">e_y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;e_y=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">e_y</span><span class="si">:</span><span class="s1">-8.2e</span><span class="si">}</span><span class="s1"> &#39;</span>
+
+        <span class="k">return</span> <span class="n">text</span></div>
+
+<div class="viewcode-block" id="TTOpt.minimize"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.minimize">[docs]</a>    <span class="k">def</span> <span class="nf">minimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rmax</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">Y0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fs_opt</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform the function minimization process by TT-based approach.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            rmax (int): maximum TT-rank.</span>
+<span class="sd">            Y0 (list of 3D np.ndarrays of float): optional initial tensor in</span>
+<span class="sd">                the TT format as a list of the TT-cores.</span>
+<span class="sd">            fs_opt (float): the parameter of the smoothing function. If it is</span>
+<span class="sd">                None, then &quot;arctan&quot; function will be used. Otherwise, the</span>
+<span class="sd">                function &quot;exp(-1 * fs_opt * (p - p0))&quot; will be used.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">t_minim</span> <span class="o">=</span> <span class="n">tpc</span><span class="p">()</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">ttopt_old</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_old</span> <span class="k">else</span> <span class="n">ttopt</span>
+        <span class="n">i_min</span><span class="p">,</span> <span class="n">y_min</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">rmax</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Y0</span><span class="p">,</span> <span class="n">fs_opt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_minim</span> <span class="o">=</span> <span class="n">tpc</span><span class="p">()</span> <span class="o">-</span> <span class="n">t_minim</span></div>
+
+<div class="viewcode-block" id="TTOpt.qtt_parse_many"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.qtt_parse_many">[docs]</a>    <span class="k">def</span> <span class="nf">qtt_parse_many</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I_qtt</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform tensor indices from QTT (long) to base (short) format.&quot;&quot;&quot;</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">I_qtt</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">n_qtt</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">):</span>
+            <span class="n">J_curr</span> <span class="o">=</span> <span class="n">I_qtt</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="o">*</span><span class="n">i</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="o">*</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">I</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel_multi_index</span><span class="p">(</span><span class="n">J_curr</span><span class="p">,</span> <span class="n">n_qtt</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;F&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">I</span></div>
+
+<div class="viewcode-block" id="TTOpt.s2i"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.s2i">[docs]</a>    <span class="k">def</span> <span class="nf">s2i</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transforms string like &#39;1-2-3&#39; into array of int like [1, 2, 3].&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TTOpt._eval"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt._eval">[docs]</a>    <span class="k">def</span> <span class="nf">_eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper that computes target function in one or many points.&quot;&quot;&quot;</span>
+        <span class="n">t_evals</span> <span class="o">=</span> <span class="n">tpc</span><span class="p">()</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">is_many</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_func</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">i2x_many</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_many</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">i2x</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">i</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_opt</span><span class="p">:</span>
+            <span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">)]</span> <span class="k">if</span> <span class="n">is_many</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_evals_curr</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">size</span> <span class="k">if</span> <span class="n">is_many</span> <span class="k">else</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_evals_curr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_evals</span> <span class="o">+=</span> <span class="n">tpc</span><span class="p">()</span> <span class="o">-</span> <span class="n">t_evals</span>
+
+        <span class="k">return</span> <span class="n">y</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="../../index.html">
+    <img class="logo" src="../../_static/favicon.ico" alt="Logo"/>
+    
+    <h1 class="logo logo-name">ttopt</h1>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ttopt.html">ttopt: multidimensional minimizer (main class)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ttopt_raw.html">ttopt_raw: multidimensional minimizer (algorithmic part)</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-2022.
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

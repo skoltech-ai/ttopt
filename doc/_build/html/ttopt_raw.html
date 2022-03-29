@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
+
+    <title>ttopt_raw: multidimensional minimizer (algorithmic part) &#8212; ttopt  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="ttopt: multidimensional minimizer (main class)" href="ttopt.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-ttopt.ttopt_raw">
+<span id="ttopt-raw-multidimensional-minimizer-algorithmic-part"></span><h1>ttopt_raw: multidimensional minimizer (algorithmic part)<a class="headerlink" href="#module-ttopt.ttopt_raw" title="Permalink to this headline">¶</a></h1>
+<p>Multidimensional minimizer based on the cross-maximum-volume principle.</p>
+<p>This module contains the main function “ttopt” that finds the approximate
+minimum of the given multidimensional array (tensor), which can represent a
+discretized multivariable function.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For the task of finding the extremum of a function of many variables or
+multidimensional array, a wrapper class “TTOpt” (from “ttopt.py”) could be
+used. It provides a set of methods for discretizing the function, caching
+previously requested values and logging intermediate results. In this case,
+a wrapper “TTOpt.comp_min” should be passed to the function “ttopt” as its
+first argument (the method “TTOpt.minimize” provides the related interface).</p>
+</div>
+<dl class="py function">
+<dt class="sig sig-object py" id="ttopt.ttopt_raw.ttopt">
+<span class="sig-prename descclassname"><span class="pre">ttopt.ttopt_raw.</span></span><span class="sig-name descname"><span class="pre">ttopt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fs_opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ttopt/ttopt_raw.html#ttopt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ttopt.ttopt_raw.ttopt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the minimum element of the implicitly given multidimensional array.</p>
+<p>This function computes the minimum of the implicitly given d-dimensional
+(d &gt;= 2) array (tensor). The adaptive method based on the tensor train (TT)
+approximation and the cross-maximum-volume principle are used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f</strong> (<em>function</em>) – the function that returns tensor values for the given set
+of the indices. Its arguments are (I, i_min, y_min, opt_min), where
+“I” represents several multi-indices (samples) for calculation (it
+is 2D np.ndarray of the shape [samples, dimensions]), “i_min”
+represents the current multi-index of the argmin approximation (it
+is 1D np.ndarray of the shape [dimensions]; note that while the
+first call it will be None), “y_min” represents the current
+approximated minimum of the tensor (it is float; note that while
+the first call it will be None) and “opt_min” is the value of the
+auxiliary quantity corresponding to the multi-index “i_min” (it is
+used for debugging and in specific parallel calculations). The
+output of the function should be the corresponding values in the
+given indices (1D np.ndarray of the shape [samples]) and related
+values of the auxiliary quantities at the requested points (1D
+np.ndarray of the shape [samples] of any). If the function returns
+None instead of the tensor values, then the algorithm will be
+interrupted and the current approximation will be returned.</p></li>
+<li><p><strong>n</strong> (<em>list of len d of int</em>) – number of grid points for every dimension
+(i.e., the shape of the tensor). Note that the tensor must have a
+dimension of at least 2.</p></li>
+<li><p><strong>rmax</strong> (<em>int</em>) – maximum used rank for unfolding matrices.</p></li>
+<li><p><strong>evals</strong> (<em>int</em><em> or </em><em>float</em>) – number of available calls to function (i.e.,
+computational budget). If it is None, then the algorithm will run
+until the target function returns a None instead of the y-value.</p></li>
+<li><p><strong>Y0</strong> (<em>list of 3D np.ndarrays</em>) – optional initial tensor in the TT-format
+(it should be represented as a list of the TT-cores). If it is not
+specified, then a random TT-tensor with TT-rank “rmax” will be used.</p></li>
+<li><p><strong>fs_opt</strong> (<em>float</em>) – the parameter of the smoothing function. If it is None,
+then “arctan” function will be used. Otherwise, the function
+“exp(-1 * fs_opt * (p - p0))” will be used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the multi-index that gives the minimum value of the
+tensor (it is 1D np.ndarray of length “d” of int; i.e., “i_min”) and
+the minimum value of the tensor (it is float; i.e., “y_min”) that
+corresponds to the multi-index “i_min”.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[np.ndarray, float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ttopt.ttopt_raw.ttopt_find">
+<span class="sig-prename descclassname"><span class="pre">ttopt.ttopt_raw.</span></span><span class="sig-name descname"><span class="pre">ttopt_find</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">I</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">i_min</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_min</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt_min</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ttopt/ttopt_raw.html#ttopt_find"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ttopt.ttopt_raw.ttopt_find" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the minimum value on a set of sampled points.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ttopt.ttopt_raw.ttopt_fs">
+<span class="sig-prename descclassname"><span class="pre">ttopt.ttopt_raw.</span></span><span class="sig-name descname"><span class="pre">ttopt_fs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ttopt/ttopt_raw.html#ttopt_fs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ttopt.ttopt_raw.ttopt_fs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Smooth function that transforms max to min.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ttopt.ttopt_raw.ttopt_init">
+<span class="sig-prename descclassname"><span class="pre">ttopt.ttopt_raw.</span></span><span class="sig-name descname"><span class="pre">ttopt_init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">with_rank</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ttopt/ttopt_raw.html#ttopt_init"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ttopt.ttopt_raw.ttopt_init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build initial approximation for the main algorithm.</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<p class="logo">
+  <a href="index.html">
+    <img class="logo" src="_static/favicon.ico" alt="Logo"/>
+    
+    <h1 class="logo logo-name">ttopt</h1>
+    
+  </a>
+</p>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="ttopt.html">ttopt: multidimensional minimizer (main class)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ttopt_raw: multidimensional minimizer (algorithmic part)</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="ttopt.html" title="previous chapter">ttopt: multidimensional minimizer (main class)</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021-2022.
+      
+      |
+      <a href="_sources/ttopt_raw.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

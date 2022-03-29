@@ -465,7 +465,7 @@ class TTOpt():
                 the TT format as a list of the TT-cores.
             fs_opt (float): the parameter of the smoothing function. If it is
                 None, then "arctan" function will be used. Otherwise, the
-                function "exp(-1 * fs_opt *(p - p0))" will be used.
+                function "exp(-1 * fs_opt * (p - p0))" will be used.
 
         """
         t_minim = tpc()
