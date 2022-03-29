@@ -72,4 +72,4 @@ def run_rep(d=10, p=2, q=25, evals=1.E+5, rmax=4, reps=10):
 
 
 if __name__ == '__main__':
-    run_rep()
+    run()
