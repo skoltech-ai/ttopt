@@ -194,6 +194,10 @@ def _iter(Z, J, Jg, l2r=True):
     Z = _reshape(Z, (r1 * n, r2)) if l2r else _reshape(Z, (r1, n * r2)).T
 
     Q, R = np.linalg.qr(Z)
+
+    if False:
+        Q = _svd(Q, r=4)[0]
+
     ind = _maxvol(Q)
 
     J_new = _stack(J, Jg, l2r)
@@ -250,6 +254,35 @@ def _stack(J, Jg, l2r=True):
         J_new = np.hstack((J_old, J_new)) if l2r else np.hstack((J_new, J_old))
 
     return J_new
+
+
+def _svd(A, e=1.E-10, r=1.E+12, e0=1.E-14):
+    m, n = A.shape
+    C = A @ A.T if m <= n else A.T @ A
+
+    if np.linalg.norm(C) < e0:
+        return np.zeros([m, 1]), np.zeros([1, n])
+
+    w, U = np.linalg.eigh(C)
+
+    w[w < 0] = 0.
+    w = np.sqrt(w)
+
+    idx = np.argsort(w)[::-1]
+    w = w[idx]
+    U = U[:, idx]
+
+    s = w**2
+    where = np.where(np.cumsum(s[::-1]) <= e**2)[0]
+    dlen = 0 if len(where) == 0 else int(1 + where[-1])
+    rank = max(1, min(int(r), len(s) - dlen))
+    w = w[:rank]
+    U = U[:, :rank]
+
+    V = ((1. / w)[:, np.newaxis] * U.T) @ A if m <= n else U.T
+    U = U * w if m <= n else A @ U
+
+    return U, V
 
 
 def _update_iter(d, i, iter, l2r):
