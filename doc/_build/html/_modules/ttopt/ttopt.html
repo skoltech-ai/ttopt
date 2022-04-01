@@ -133,7 +133,10 @@
 <span class="sd">        use_old (bool): if flag is True, then old TTOpt algorithm will be used.</span>
 <span class="sd">        with_full_info (bool): if flag is True, then the full information will</span>
 <span class="sd">            be saved, including multi-indices of requested points (it is used</span>
-<span class="sd">            by animation function).</span>
+<span class="sd">            by animation function). It is False by default.</span>
+<span class="sd">        with_wrn (bool): if flag is True, then warning messages will be</span>
+<span class="sd">            presented (in the current version, it can only be messages about</span>
+<span class="sd">            early convergence when using the cache). It is True by default.</span>
 
 <span class="sd">    Note:</span>
 <span class="sd">        Call &quot;calc&quot; to evaluate function for one tensor multi-index and call</span>
@@ -143,7 +146,7 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">evals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x_min_real</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_min_real</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">is_func</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">is_vect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">with_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_log</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_opt</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_old</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_full_info</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">evals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x_min_real</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_min_real</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">is_func</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">is_vect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">with_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_log</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_opt</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_old</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_full_info</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_wrn</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="c1"># The target function and its dimension:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">f</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">d</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
@@ -206,6 +209,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">with_opt</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">with_opt</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">use_old</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">use_old</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">with_full_info</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">with_full_info</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">with_wrn</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">with_wrn</span><span class="p">)</span>
 
         <span class="c1"># Inner variables:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="p">{}</span>     <span class="c1"># Cache for the results of requests to function</span>
@@ -394,7 +398,8 @@
                 <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;the number of requests to the cache is 2 times higher &#39;</span>
                 <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;than the number of requests to the function. &#39;</span>
                 <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;The work is finished before max func-evals reached.&#39;</span>
-                <span class="nb">print</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_wrn</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
                 <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 
         <span class="c1"># We truncate the list of requested points if it exceeds the limit:</span>
@@ -491,7 +496,7 @@
 
         <span class="k">return</span> <span class="n">text</span></div>
 
-<div class="viewcode-block" id="TTOpt.minimize"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.minimize">[docs]</a>    <span class="k">def</span> <span class="nf">minimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rmax</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">Y0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fs_opt</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="TTOpt.minimize"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.minimize">[docs]</a>    <span class="k">def</span> <span class="nf">minimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rmax</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">Y0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fs_opt</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Perform the function minimization process by TT-based approach.</span>
 
 <span class="sd">        Args:</span>

@@ -7,14 +7,6 @@
 .thumbs.db
 .Thumbs.db
 __pycache__/
-_.md
-_doc/
-_pack/
-_text/
-_tmp/
 build/
 dist/
-comp/
-tt_rl_solver/
 check/animation
-qttopt
