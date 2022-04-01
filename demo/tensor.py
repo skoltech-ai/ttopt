@@ -3,26 +3,27 @@
 We'll find the minimum for the given simple d-dimensional tensor with elements:
 Y[i_1, i_2, ..., i_d] = (i_1 - 2)^2 + (i_2 - 3)^2 + i_2^4 + i_3^4 + ... + i_d^4.
 
+Run it from the root of the project as "python demo/tensor.py".
+
 As a result of the script work we expect the output in console like this:
 "
 ...
-Tensor-10d | k=1.00e+05 | t_cur=9.72e-03 | e_x=0.00e+00 e_y=0.00e+00
+Tensor-10d | k=1.00e+05 | t_cur=9.04e-03 | e_x=0.00e+00 e_y=0.00e+00
 ----------------------------------------------------------------------
-Tensor-10d | k=1.00e+05 | t_all=9.96e-02 | e_x=0.00e+00 e_y=0.00e+00
+Tensor-10d | k=1.00e+05 | t_all=1.21e-01 | e_x=0.00e+00 e_y=0.00e+00
 y_opt :  0
 x_opt :  [2 3 0 0 0 0 0 0 0 0]
 "
 
 """
 import numpy as np
-from scipy.optimize import rosen
 
 
 from ttopt import TTOpt
 from ttopt import ttopt_init
 
 
-np.random.seed(16333)
+np.random.seed(42)
 
 
 d = 10                      # Number of function dimensions

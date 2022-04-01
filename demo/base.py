@@ -1,45 +1,46 @@
 """The demo of using ttopt. Basic example.
 
-We'll find the minimum for the 10-dimensional Rosenbrock function with
-vectorized input. The target function for minimization has the form f(X), where
-input X is the [samples, dimension] numpy array.
+We'll find the minimum for the 10-dimensional Alpine function with vectorized
+input. The target function for minimization has the form f(X), where input X is
+the [samples, dimension] numpy array.
+
+Run it from the root of the project as "python demo/base.py".
 
 As a result of the script work we expect the output in console like this:
 "
 ...
-Rosen-10d | k=1.00e+06 | t_cur=2.28e-01 | e_x=5.02e-02 e_y=2.22e-01
+Alpine-10d | k=1.00e+05 | t_cur=2.39e-02 | e_x=5.02e-01 e_y=9.22e-02
 ----------------------------------------------------------------------
-Rosen-10d | k=1.00e+06 | t_all=5.46e-01 | e_x=5.02e-02 e_y=2.22e-01
+Alpine-10d | k=1.00e+05 | t_all=1.12e-01 | e_x=5.02e-01 e_y=9.22e-02
 "
 
 """
 import numpy as np
-from scipy.optimize import rosen
 
 
 from ttopt import TTOpt
 from ttopt import ttopt_init
 
 
-np.random.seed(16333)
+np.random.seed(42)
 
 
 d = 10                      # Number of function dimensions:
-rmax = 8                    # Maximum TT-rank while cross-like iterations
+rmax = 4                    # Maximum TT-rank while cross-like iterations
 def f(X):                   # Target function
-    return rosen(X.T)
+    return np.sum(np.abs(X * np.sin(X) + 0.1 * X), axis=1)
 
 
 # We initialize the TTOpt class instance with the correct parameters:
 tto = TTOpt(
     f=f,                    # Function for minimization. X is [samples, dim]
     d=d,                    # Number of function dimensions
-    a=-2.,                  # Grid lower bound (number or list of len d)
-    b=+2.,                  # Grid upper bound (number or list of len d)
+    a=-10.,                 # Grid lower bound (number or list of len d)
+    b=+10.,                 # Grid upper bound (number or list of len d)
     n=2**6,                 # Number of grid points (number or list of len d)
-    evals=1.E+6,            # Number of function evaluations
-    name='Rosen',           # Function name for log (this is optional)
-    x_min_real=np.ones(d),  # Real value of x-minima (x; this is for test)
+    evals=1.E+5,            # Number of function evaluations
+    name='Alpine',          # Function name for log (this is optional)
+    x_min_real=np.zeros(d), # Real value of x-minima (x; this is for test)
     y_min_real=0.,          # Real value of y-minima (y=f(x); this is for test)
     with_log=True)
 

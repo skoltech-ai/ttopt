@@ -3,12 +3,14 @@
 We'll find the minimum for the simple analytic function of the form f(x), where
 input x is the [dimension] numpy array (not vectorized!).
 
+Run it from the root of the project as "python demo/vect.py".
+
 As a result of the script work we expect the output in console like this:
 "
 ...
-Simple-5d | k=1.00e+04 | t_cur=1.41e-01 | e_x=3.55e-02 e_y=1.03e-04
+Simple-5d | k=1.00e+04 | t_cur=1.54e-01 | e_x=3.55e-02 e_y=1.03e-04
 ----------------------------------------------------------------------
-Simple-5d | k=1.00e+04 | t_all=1.61e-01 | e_x=3.55e-02 e_y=1.03e-04
+Simple-5d | k=1.00e+04 | t_all=1.75e-01 | e_x=3.55e-02 e_y=1.03e-04
 "
 
 """
@@ -20,7 +22,7 @@ from ttopt import TTOpt
 from ttopt import ttopt_init
 
 
-np.random.seed(16333)
+np.random.seed(42)
 
 
 d = 5                       # Number of function dimensions:

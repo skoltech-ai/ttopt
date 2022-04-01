@@ -3,12 +3,14 @@
 We'll find the minimum for the simple analytic function of the form f(X), where
 input X is the [samples, dimension] numpy array using the cache.
 
+Run it from the root of the project as "python demo/cache.py".
+
 As a result of the script work we expect the output in console like this:
 "
 ...
-Simple-5d | k=9.97e+03+8.10e+02 | t_cur=7.17e-02 | e_x=3.55e-02 e_y=1.03e-04
+Simple-5d | k=9.86e+03+2.69e+03 | t_cur=7.36e-02 | e_x=3.55e-02 e_y=1.03e-04
 ----------------------------------------------------------------------
-Simple-5d | k=9.97e+03+8.10e+02 | t_all=8.66e-02 | e_x=3.55e-02 e_y=1.03e-04
+Simple-5d | k=9.86e+03+2.69e+03 | t_all=8.88e-02 | e_x=3.55e-02 e_y=1.03e-04 
 "
 
 """
@@ -20,7 +22,7 @@ from ttopt import TTOpt
 from ttopt import ttopt_init
 
 
-np.random.seed(16333)
+np.random.seed(42)
 
 
 d = 5                       # Number of function dimensions:
