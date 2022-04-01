@@ -26,7 +26,7 @@
 
 ## Documentation
 
-The documentation is located in the `doc` folder. To view the documentation, simply open the file `doc/_build/html/index.html` in a web browser.
+The documentation is located in the `doc` folder. To view the documentation, simply open the file `doc/_build/html/index.html` in any web browser.
 
 
 ## Examples
@@ -53,6 +53,8 @@ To reproduce the results from the paper (it is currently in the process of being
 3. Run `python demo_calc/run.py -d 10 -r 4 --evals 1.E+5 --reps 10 --kind quan`;
 4. Run `python demo_calc/run.py -d 10 -p 2 -q 25 --evals 1.E+5 --reps 10 --kind rank`;
 5. Run `python demo_calc/run.py -d 10 --kind show`. The results will be saved to the `demo_calc/res_logs` and `demo_calc/res_plot` folders.
+
+> **The scripts in this folder have not been updated since the transition to the new version of the code. The presented results correspond to the version 0.2 of the software product.**
 
 
 ## Authors
