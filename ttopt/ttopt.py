@@ -98,7 +98,10 @@ class TTOpt():
         use_old (bool): if flag is True, then old TTOpt algorithm will be used.
         with_full_info (bool): if flag is True, then the full information will
             be saved, including multi-indices of requested points (it is used
-            by animation function).
+            by animation function). It is False by default.
+        with_wrn (bool): if flag is True, then warning messages will be
+            presented (in the current version, it can only be messages about
+            early convergence when using the cache). It is True by default.
 
     Note:
         Call "calc" to evaluate function for one tensor multi-index and call
@@ -108,7 +111,7 @@ class TTOpt():
 
     """
 
-    def __init__(self, f, d, a=None, b=None, n=None, p=None, q=None, evals=None, name=None, callback=None, x_min_real=None, y_min_real=None, is_func=True, is_vect=True, with_cache=False, with_log=False, with_opt=False, use_old=False, with_full_info=False):
+    def __init__(self, f, d, a=None, b=None, n=None, p=None, q=None, evals=None, name=None, callback=None, x_min_real=None, y_min_real=None, is_func=True, is_vect=True, with_cache=False, with_log=False, with_opt=False, use_old=False, with_full_info=False, with_wrn=True):
         # The target function and its dimension:
         self.f = f
         self.d = int(d)
@@ -171,6 +174,7 @@ class TTOpt():
         self.with_opt = bool(with_opt)
         self.use_old = bool(use_old)
         self.with_full_info = bool(with_full_info)
+        self.with_wrn = bool(with_wrn)
 
         # Inner variables:
         self.cache = {}     # Cache for the results of requests to function
@@ -359,7 +363,8 @@ class TTOpt():
                 text += 'the number of requests to the cache is 2 times higher '
                 text += 'than the number of requests to the function. '
                 text += 'The work is finished before max func-evals reached.'
-                print(text)
+                if self.with_wrn:
+                    print(text)
                 return None, None
 
         # We truncate the list of requested points if it exceeds the limit:
@@ -456,7 +461,7 @@ class TTOpt():
 
         return text
 
-    def minimize(self, rmax=10, Y0=None, fs_opt=None):
+    def minimize(self, rmax=10, Y0=None, fs_opt=1.):
         """Perform the function minimization process by TT-based approach.
 
         Args:

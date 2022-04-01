@@ -17,7 +17,7 @@ from maxvolpy.maxvol import maxvol
 import numpy as np
 
 
-def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
+def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1.):
     """Find the minimum element of the implicitly given multidimensional array.
 
     This function computes the minimum of the implicitly given d-dimensional
@@ -124,13 +124,9 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=None):
         # We perform iteration:
         if l2r and i < d - 1:
             J_list[i+1] = _iter(Z, J_list[i], Jg_list[i], l2r)
-            J_list[i+1] = _add_row(J_list[i+1], i_min[:(i+1)])
-            # J_list[i+1] = _add_random(J_list[i+1], n[:(i+1)])
             r[i+1] = J_list[i+1].shape[0]
         if not l2r and i > 0:
             J_list[i] = _iter(Z, J_list[i+1], Jg_list[i], l2r)
-            J_list[i] = _add_row(J_list[i], i_min[i:])
-            # J_list[i] = _add_random(J_list[i], n[i:])
             r[i] = J_list[i].shape[0]
 
         # We update the current core index:
@@ -150,9 +146,9 @@ def ttopt_find(I, y, opt, i_min, y_min, opt_min):
     return I[ind, :], y_min_curr, opt[ind]
 
 
-def ttopt_fs(y, y0=0., opt=None):
+def ttopt_fs(y, y0=0., opt=1.):
     """Smooth function that transforms max to min."""
-    if opt is None:
+    if opt is None or opt == 0:
         return np.pi/2 - np.arctan(y - y0)
     else:
         return np.exp(opt * (y0 - y))
@@ -176,18 +172,6 @@ def ttopt_init(n, rmax, Y0=None, with_rank=False):
         return Y0
 
 
-def _add_random(J, n):
-    i_rnd = [np.random.choice(k) for k in n]
-    i_rnd = np.array(i_rnd, dtype=int)
-    J_new = np.vstack((J, i_rnd.reshape(1, -1)))
-    return J_new
-
-
-def _add_row(J, i_new):
-    J_new = np.vstack((J, i_new.reshape(1, -1)))
-    return J_new
-
-
 def _iter(Z, J, Jg, l2r=True):
     r1, n, r2 = Z.shape
 
@@ -195,10 +179,11 @@ def _iter(Z, J, Jg, l2r=True):
 
     Q, R = np.linalg.qr(Z)
 
-    if False:
-        Q = _svd(Q, r=4)[0]
-
     ind = _maxvol(Q)
+
+    i_max, j_max = np.divmod(np.abs(Z).argmax(), Z.shape[1])
+    if not i_max in ind:
+        ind[-1] = i_max
 
     J_new = _stack(J, Jg, l2r)
     J_new = J_new[ind, :]
@@ -207,13 +192,6 @@ def _iter(Z, J, Jg, l2r=True):
 
 
 def _maxvol(A, tol=1.001, max_iters=1000):
-    if False:
-        # Test (replacement of maxvol by random indices):
-        n, r = A.shape
-        i_rnd = [np.random.choice(n) for _ in range(r)]
-        i_rnd = np.array(i_rnd, dtype=int)
-        return i_rnd
-
     return maxvol(A, tol=tol, max_iters=max_iters)[0]
 
 
@@ -254,35 +232,6 @@ def _stack(J, Jg, l2r=True):
         J_new = np.hstack((J_old, J_new)) if l2r else np.hstack((J_new, J_old))
 
     return J_new
-
-
-def _svd(A, e=1.E-10, r=1.E+12, e0=1.E-14):
-    m, n = A.shape
-    C = A @ A.T if m <= n else A.T @ A
-
-    if np.linalg.norm(C) < e0:
-        return np.zeros([m, 1]), np.zeros([1, n])
-
-    w, U = np.linalg.eigh(C)
-
-    w[w < 0] = 0.
-    w = np.sqrt(w)
-
-    idx = np.argsort(w)[::-1]
-    w = w[idx]
-    U = U[:, idx]
-
-    s = w**2
-    where = np.where(np.cumsum(s[::-1]) <= e**2)[0]
-    dlen = 0 if len(where) == 0 else int(1 + where[-1])
-    rank = max(1, min(int(r), len(s) - dlen))
-    w = w[:rank]
-    U = U[:, :rank]
-
-    V = ((1. / w)[:, np.newaxis] * U.T) @ A if m <= n else U.T
-    U = U * w if m <= n else A @ U
-
-    return U, V
 
 
 def _update_iter(d, i, iter, l2r):
