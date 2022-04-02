@@ -461,7 +461,7 @@ class TTOpt():
 
         return text
 
-    def minimize(self, rmax=10, Y0=None, fs_opt=1.):
+    def minimize(self, rmax=10, Y0=None, fs_opt=1., add_opt_inner=True, add_opt_outer=False, add_opt_rect=False, add_rnd_inner=False, add_rnd_outer=False):
         """Perform the function minimization process by TT-based approach.
 
         Args:
@@ -474,8 +474,15 @@ class TTOpt():
 
         """
         t_minim = tpc()
-        func = ttopt_old if self.use_old else ttopt
-        i_min, y_min = func(self.comp_min, self.n, rmax, None, Y0, fs_opt)
+
+        if self.use_old:
+            i_min, y_min = ttopt_old(self.comp_min, self.n, rmax, None, Y0,
+                fs_opt)
+        else:
+            i_min, y_min = ttopt(self.comp_min, self.n, rmax, None, Y0,
+                fs_opt, add_opt_inner, add_opt_outer, add_opt_rect,
+                add_rnd_inner, add_rnd_outer)
+
         self.t_minim = tpc() - t_minim
 
     def qtt_parse_many(self, I_qtt):

@@ -14,10 +14,11 @@ Note:
 
 """
 from maxvolpy.maxvol import maxvol
+from maxvolpy.maxvol import rect_maxvol
 import numpy as np
 
 
-def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1.):
+def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1., add_opt_inner=True, add_opt_outer=False, add_opt_rect=False, add_rnd_inner=False, add_rnd_outer=False):
     """Find the minimum element of the implicitly given multidimensional array.
 
     This function computes the minimum of the implicitly given d-dimensional
@@ -123,10 +124,20 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1.):
 
         # We perform iteration:
         if l2r and i < d - 1:
-            J_list[i+1] = _iter(Z, J_list[i], Jg_list[i], l2r)
+            J_list[i+1] = _iter(Z, J_list[i], Jg_list[i], l2r,
+                add_opt_inner, add_opt_rect, add_rnd_inner)
+            if add_opt_outer:
+                J_list[i+1] = _add_row(J_list[i+1], i_min[:(i+1)])
+            if add_rnd_outer:
+                J_list[i+1] = _add_random(J_list[i+1], n[:(i+1)])
             r[i+1] = J_list[i+1].shape[0]
         if not l2r and i > 0:
-            J_list[i] = _iter(Z, J_list[i+1], Jg_list[i], l2r)
+            J_list[i] = _iter(Z, J_list[i+1], Jg_list[i], l2r,
+                add_opt_inner, add_opt_rect, add_rnd_inner)
+            if add_opt_outer:
+                J_list[i] = _add_row(J_list[i], i_min[i:])
+            if add_rnd_outer:
+                J_list[i] = _add_random(J_list[i], n[i:])
             r[i] = J_list[i].shape[0]
 
         # We update the current core index:
@@ -172,18 +183,36 @@ def ttopt_init(n, rmax, Y0=None, with_rank=False):
         return Y0
 
 
-def _iter(Z, J, Jg, l2r=True):
+def _add_random(J, n):
+    i_rnd = [np.random.choice(k) for k in n]
+    i_rnd = np.array(i_rnd, dtype=int)
+    J_new = np.vstack((J, i_rnd.reshape(1, -1)))
+    return J_new
+
+
+def _add_row(J, i_new):
+    J_new = np.vstack((J, i_new.reshape(1, -1)))
+    return J_new
+
+
+def _iter(Z, J, Jg, l2r=True, add_opt_inner=True, add_opt_rect=False, add_rnd_inner=False):
     r1, n, r2 = Z.shape
 
     Z = _reshape(Z, (r1 * n, r2)) if l2r else _reshape(Z, (r1, n * r2)).T
 
     Q, R = np.linalg.qr(Z)
 
-    ind = _maxvol(Q)
+    ind = _maxvol(Q, is_rect=add_opt_rect)
 
-    i_max, j_max = np.divmod(np.abs(Z).argmax(), Z.shape[1])
-    if not i_max in ind:
-        ind[-1] = i_max
+    if add_opt_inner:
+        i_max, j_max = np.divmod(np.abs(Z).argmax(), Z.shape[1])
+        if not i_max in ind:
+            ind[-1] = i_max
+
+    if add_rnd_inner and len(ind) > 1:
+        i_rnd = np.random.choice(Z.shape[0])
+        if not i_rnd in ind:
+            ind[-2] = i_rnd
 
     J_new = _stack(J, Jg, l2r)
     J_new = J_new[ind, :]
@@ -191,8 +220,21 @@ def _iter(Z, J, Jg, l2r=True):
     return J_new
 
 
-def _maxvol(A, tol=1.001, max_iters=1000):
-    return maxvol(A, tol=tol, max_iters=max_iters)[0]
+def _maxvol(A, tol=1.001, max_iters=1000, is_rect=False):
+    if is_rect:
+        tol_rect = 1.
+        kickrank = 1
+        rf = 1.
+
+        if kickrank is not None and rf is not None:
+            maxK = A.shape[1] + kickrank + rf
+        else:
+            maxK = None
+
+        return rect_maxvol(A, tol=tol_rect, min_add_K=kickrank, maxK=maxK,
+            start_maxvol_iters=10, identity_submatrix=False)[0]
+    else:
+        return maxvol(A, tol=tol, max_iters=max_iters)[0]
 
 
 def _merge(J1, J2, Jg):
