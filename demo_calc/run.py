@@ -65,6 +65,11 @@ FUNC_NAMES = [
 
 
 # List of ranks to check dependency of TTOpt on rank:
+# D_LIST = [10, 50, 100, 500]
+D_LIST = [25, 250]
+
+
+# List of ranks to check dependency of TTOpt on rank:
 R_LIST = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
@@ -107,6 +112,9 @@ def run_comp(d, p, q, r, evals, reps=1, name='calc1', with_log=False):
         func = func_class(d)
         log(f'--- Minimize function {func.name}-{d}dim\n', d, name, 'comp')
 
+        if d != 10 and func.name == 'Michalewicz':
+            continue
+
         res[func.name] = {}
 
         for opt_class in OPTS:
@@ -114,12 +122,39 @@ def run_comp(d, p, q, r, evals, reps=1, name='calc1', with_log=False):
             if opt.name == 'TTOpt':
                 opt.prep(None, p, q, r, evals)
             else:
+                if d != 10: # TODO: remove
+                    continue
                 opt.prep(popsize=GA_POPSIZE, iters=evals/GA_POPSIZE)
 
             res[func.name][opt.name] = solve(opt, d, name, 'comp', reps)
             save(res, d, name, 'comp')
 
         log('\n\n', d, name, 'comp')
+
+
+def run_dim(p, q, r, reps=1, name='calc1', with_log=False):
+    """Solve for different dimension numbers."""
+    d0 = D_LIST[-1]
+    log(f'', d0, name, 'dim', is_init=True)
+    res = {}
+
+    for d in D_LIST:
+        evals = int(1.E+4 * d)
+        res[d] = {}
+        for func_class in FUNCS:
+            func = func_class(d)
+            if func.name == 'Michalewicz':
+                continue
+
+            log(f'--- Minimize function {func.name}-{d}dim', d0, name, 'dim')
+
+            opt = OptTTOpt(func, verb=with_log)
+            opt.prep(None, p, q, r, evals)
+
+            res[d][func.name] = solve(opt, d, name, 'dim', reps, d0)
+            save(res, d0, name, 'dim')
+
+            log('', d0, name, 'dim')
 
 
 def run_iter(d, p, q, r, reps=1, name='calc1', with_log=False):
@@ -296,9 +331,6 @@ def run_show_quan(d, name='calc1'):
     log(text, d, name, 'show')
 
 
-    return
-
-
 def run_show_rank(d, name='calc1'):
     """Show results of the previous calculations for "rank"."""
     res = load(d, name, 'rank')
@@ -334,7 +366,7 @@ def save(res, d, name, kind):
         pickle.dump(res, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def solve(opt, d, name, kind, reps=1):
+def solve(opt, d, name, kind, reps=1, d_log=None):
     t, y, e, m = [], [], [], []
     for rep in range(reps):
         np.random.seed(rep)
@@ -342,13 +374,13 @@ def solve(opt, d, name, kind, reps=1):
         opt.init()
         opt.solve()
 
-        log(opt.info(), d, name, kind)
+        log(opt.info(), d_log or d, name, kind)
 
         t.append(opt.t)
         y.append(opt.y)
         e.append(opt.e_y)
         m.append(opt.m)
-
+    print(f'{np.mean(e):-7.1e} {np.mean(t):.2f}')
     return {
         't': np.mean(t),
         'e': np.mean(e),
@@ -386,8 +418,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.kind == 'comp' or args.kind == 'all':
+    if args.kind == 'comp':
         run_comp(args.d, args.p, args.q, args.r, args.evals, args.reps,
+            args.name, args.verb)
+    if args.kind == 'dim':
+        run_dim(args.p, args.q, args.r, args.reps,
             args.name, args.verb)
     elif args.kind == 'iter':
         run_iter(args.d, args.p, args.q, args.r, args.reps,

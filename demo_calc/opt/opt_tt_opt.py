@@ -42,8 +42,10 @@ class OptTTOpt(Opt):
             q=self.q,
             evals=self.evals,
             with_log=self.verb,
-            with_cache=False)
-        tto.minimize(self.r)
+            with_cache=False,
+            use_old=True
+            )
+        tto.minimize(self.r, fs_opt=None)
 
         self.t = tpc() - t
 

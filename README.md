@@ -52,7 +52,10 @@ To reproduce the results from the paper (it is currently in the process of being
 2. Run `python demo_calc/run.py -d 10 -p 2 -q 25 -r 4 --reps 10 --kind iter`;
 3. Run `python demo_calc/run.py -d 10 -r 4 --evals 1.E+5 --reps 10 --kind quan`;
 4. Run `python demo_calc/run.py -d 10 -p 2 -q 25 --evals 1.E+5 --reps 10 --kind rank`;
-5. Run `python demo_calc/run.py -d 10 --kind show`. The results will be saved to the `demo_calc/res_logs` and `demo_calc/res_plot` folders.
+5. Run `python demo_calc/run.py -d 100 -p 2 -q 25 -r 4 --evals 1.E+6 --reps 10 --kind comp`;
+6. Run `python demo_calc/run.py -p 2 -q 25 -r 4 --reps 1 --kind dim`;
+7. Run `python demo_calc/run.py -d 4 -p 2 -q 25 -r 4 --evals 1.E+5 --reps 10 --kind comp`;
+8. Run `python demo_calc/run.py -d 10 --kind show`. The results will be saved to the `demo_calc/res_logs` and `demo_calc/res_plot` folders.
 
 > **The scripts in this folder have not been updated since the transition to the new version of the code. The presented results correspond to the version 0.2 of the software product.**
 
