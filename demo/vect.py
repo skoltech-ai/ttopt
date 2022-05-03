@@ -53,8 +53,6 @@ tto.minimize(rmax)
 # We can extract the results of the computation:
 x = tto.x_min          # The found value of the minimum of the function (x)
 y = tto.y_min          # The found value of the minimum of the function (y=f(x))
-x_l = tto.x_min_list   # Intermediate appr. of minima (x) while iterations
-y_l = tto.y_min_list   # Intermediate appr. of minima (y=f(x)) while iterations
 k_c = tto.k_cache      # Total number of cache usage (should be 0 in this demo)
 k_e = tto.k_evals      # Total number of requests to func (is always = evals)
 k_t = tto.k_total      # Total number of requests (k_cache + k_evals)

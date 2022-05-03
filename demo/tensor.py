@@ -12,7 +12,7 @@ Tensor-10d | k=1.00e+05 | t_cur=9.04e-03 | e_x=0.00e+00 e_y=0.00e+00
 ----------------------------------------------------------------------
 Tensor-10d | k=1.00e+05 | t_all=1.21e-01 | e_x=0.00e+00 e_y=0.00e+00
 y_opt :  0
-x_opt :  [2 3 0 0 0 0 0 0 0 0]
+i_opt :  [2 3 0 0 0 0 0 0 0 0]
 "
 
 """
@@ -59,10 +59,8 @@ tto.minimize(rmax)
 
 
 # We can extract the results of the computation:
-x = tto.x_min          # The found value of the minimum of the function (x)
+i = tto.i_min          # The found value of the minimum (multi-index)
 y = tto.y_min          # The found value of the minimum of the function (y=f(x))
-x_l = tto.x_min_list   # Intermediate appr. of minima (x) while iterations
-y_l = tto.y_min_list   # Intermediate appr. of minima (y=f(x)) while iterations
 k_c = tto.k_cache      # Total number of cache usage (should be 0 in this demo)
 k_e = tto.k_evals      # Total number of requests to func (is always = evals)
 k_t = tto.k_total      # Total number of requests (k_cache + k_evals)
@@ -73,4 +71,4 @@ t_f = tto.t_evals_mean # Average time spent to real function call for 1 point
 # We log the final state:
 print('-' * 70 + '\n' + tto.info())
 print('y_opt : ', y)
-print('x_opt : ', x)
+print('i_opt : ', i)
