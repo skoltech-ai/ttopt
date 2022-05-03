@@ -18,7 +18,7 @@ from maxvolpy.maxvol import rect_maxvol
 import numpy as np
 
 
-def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1., add_opt_inner=True, add_opt_outer=False, add_opt_rect=False, add_rnd_inner=False, add_rnd_outer=False):
+def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1., add_opt_inner=True, add_opt_outer=False, add_opt_rect=False, add_rnd_inner=False, add_rnd_outer=False, J0=None):
     """Find the minimum element of the implicitly given multidimensional array.
 
     This function computes the minimum of the implicitly given d-dimensional
@@ -73,13 +73,15 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1., add_opt_inner=True, add_
     # Grid:
     Jg_list = [np.reshape(np.arange(k), (-1, 1)) for k in n]
 
-    # Initial tensor:
-    Y0, r = ttopt_init(n, rmax, Y0, with_rank=True)
-
     # Prepare initial multi-indices for all unfolding matrices:
-    J_list = [None] * (d + 1)
-    for i in range(d - 1):
-        J_list[i+1] = _iter(Y0[i], J_list[i], Jg_list[i], l2r=True)
+    if J0 is None:
+        Y0, r = ttopt_init(n, rmax, Y0, with_rank=True)
+        J_list = [None] * (d + 1)
+        for i in range(d - 1):
+            J_list[i+1] = _iter(Y0[i], J_list[i], Jg_list[i], l2r=True)
+    else:
+        J_list = J0
+        r = [1] + [J.shape[0] for J in J_list[1:-1]] + [1]
 
     i_min = None         # Approximation of argmin for tensor
     y_min = None         # Approximation of min for tensor (float('inf'))

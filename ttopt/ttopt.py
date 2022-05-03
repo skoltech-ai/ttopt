@@ -75,7 +75,8 @@ class TTOpt():
         is_func (bool): if flag is True, then we minimize the function (the
             arguments of f correspond to continuous spatial points), otherwise
             we approximate the tensor (the arguments of f correspond to
-            discrete multidimensional tensor indices). It is True by default.
+            discrete multidimensional tensor multi-indices). It is True by
+            default.
         is_vect (bool): if flag is True, then function should accept 2D
             numpy array of the shape [samples, d] (batch of points or indices)
             and return 1D numpy array of the shape [samples]. Otherwise, the
@@ -96,9 +97,13 @@ class TTOpt():
             (it will be also saved and passed to "callback" function). It is
             False by default.
         use_old (bool): if flag is True, then old TTOpt algorithm will be used.
+            This is relevant for the possibility of reproducing old
+            calculations reflected in publications.
         with_full_info (bool): if flag is True, then the full information will
             be saved, including multi-indices of requested points (it is used
-            by animation function). It is False by default.
+            by animation function). It is False by default. Note that the
+            inclusion of this flag can significantly slow down the process of
+            the algorithm.
         with_wrn (bool): if flag is True, then warning messages will be
             presented (in the current version, it can only be messages about
             early convergence when using the cache). It is True by default.
@@ -107,12 +112,13 @@ class TTOpt():
         Call "calc" to evaluate function for one tensor multi-index and call
         "comp" to evaluate function in the set of multi-indices (both of these
         functions can be called regardless of the value of the flag "is_vect").
-        Call "minimize" to find the global minimum of the function of interest.
+        Call "minimize" to find the global minimum of the function of interest
+        by the TTOpt-algorithm.
 
     """
 
     def __init__(self, f, d, a=None, b=None, n=None, p=None, q=None, evals=None, name=None, callback=None, x_min_real=None, y_min_real=None, is_func=True, is_vect=True, with_cache=False, with_log=False, with_opt=False, use_old=False, with_full_info=False, with_wrn=True):
-        # The target function and its dimension:
+        # Set the target function and its dimension:
         self.f = f
         self.d = int(d)
 
@@ -398,8 +404,9 @@ class TTOpt():
         if self.with_full_info:
             self.I_list.append(I)
 
-        self.i_min_list.append(i_min.copy())
-        self.x_min_list.append(x_min)
+
+        self.i_min_list = [i_min.copy()] # self.i_min_list.append(i_min.copy())
+        self.x_min_list = [x_min.copy()] # self.x_min_list.append(x_min)
         self.y_min_list.append(y_min)
         self.opt_min_list.append(opt_min)
         self.evals_min_list.append(self.k_evals_curr)
@@ -461,7 +468,7 @@ class TTOpt():
 
         return text
 
-    def minimize(self, rmax=10, Y0=None, fs_opt=1., add_opt_inner=True, add_opt_outer=False, add_opt_rect=False, add_rnd_inner=False, add_rnd_outer=False):
+    def minimize(self, rmax=10, Y0=None, fs_opt=1., add_opt_inner=True, add_opt_outer=False, add_opt_rect=False, add_rnd_inner=False, add_rnd_outer=False, J0=None):
         """Perform the function minimization process by TT-based approach.
 
         Args:
@@ -481,7 +488,7 @@ class TTOpt():
         else:
             i_min, y_min = ttopt(self.comp_min, self.n, rmax, None, Y0,
                 fs_opt, add_opt_inner, add_opt_outer, add_opt_rect,
-                add_rnd_inner, add_rnd_outer)
+                add_rnd_inner, add_rnd_outer, J0)
 
         self.t_minim = tpc() - t_minim
 
