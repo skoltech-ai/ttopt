@@ -101,9 +101,9 @@ class TTOpt():
             calculations reflected in publications.
         with_full_info (bool): if flag is True, then the full information will
             be saved, including multi-indices of requested points (it is used
-            by animation function). It is False by default. Note that the
-            inclusion of this flag can significantly slow down the process of
-            the algorithm.
+            by animation function) and best found multi-indices and points.
+            Note that the inclusion of this flag can significantly slow down
+            the process of the algorithm. It is False by default.
         with_wrn (bool): if flag is True, then warning messages will be
             presented (in the current version, it can only be messages about
             early convergence when using the cache). It is True by default.
@@ -194,6 +194,10 @@ class TTOpt():
         self.t_minim = 0    # Total time of work for minimizator
         self._opt = None    # Function opts related to its output
 
+        # Current minima:
+        self.i_min = None
+        self.x_min = None
+
         # Approximations for argmin/min/opts of the function while iterations:
         self.I_list = []
         self.i_min_list = []
@@ -216,11 +220,6 @@ class TTOpt():
             return np.abs(self.y_min - self.y_min_real)
 
     @property
-    def i_min(self):
-        """Current approximation of argmin (ind) of the function of interest."""
-        return self.i_min_list[-1] if len(self.i_min_list) else None
-
-    @property
     def k_total(self):
         """Total number of requests (both function calls and cache usage)."""
         return self.k_cache + self.k_evals
@@ -239,11 +238,6 @@ class TTOpt():
     def t_total_mean(self):
         """Average time spent to return one function value."""
         return self.t_total / self.k_total if self.k_total else 0.
-
-    @property
-    def x_min(self):
-        """Current approximation of argmin of the function of interest."""
-        return self.x_min_list[-1] if len(self.x_min_list) else None
 
     @property
     def y_min(self):
@@ -401,16 +395,18 @@ class TTOpt():
         else:
             x_min = i_min.copy()
 
-        if self.with_full_info:
-            self.I_list.append(I)
+        self.i_min = i_min.copy()
+        self.x_min = x_min.copy()
 
-
-        self.i_min_list = [i_min.copy()] # self.i_min_list.append(i_min.copy())
-        self.x_min_list = [x_min.copy()] # self.x_min_list.append(x_min)
         self.y_min_list.append(y_min)
         self.opt_min_list.append(opt_min)
         self.evals_min_list.append(self.k_evals_curr)
         self.cache_min_list.append(self.k_cache_curr)
+
+        if self.with_full_info:
+            self.I_list.append(I)
+            self.i_min_list.append(self.i_min.copy())
+            self.x_min_list.append(self.x_min.copy())
 
         is_better = len(self.y_min_list) == 1 or (y_min < self.y_min_list[-2])
         if self.callback and is_better:
