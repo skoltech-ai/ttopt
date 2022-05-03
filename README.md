@@ -39,6 +39,8 @@ The demo-scripts with detailed comments are collected in the folder `demo`:
 - `vect.py` - we find the minimum for the simple analytic function with "simple input" (the function is not vectorized);
 - `cache.py` - we find the minimum for the simple analytic function to demonstrate the usage of cache;
 - `tensor.py` - in this example we find the minimum for the multidimensional array/tensor (i.e., discrete function).
+- `tensor_init_spec` - we do almost the same as in the `tensor.py` script, but use special method of initialization (instead of a random tensor, we
+select a set of starting multi-indices for the search).
 
 
 ## Calculations for benchmarks
