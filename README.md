@@ -68,3 +68,20 @@ To reproduce the results from the paper (it is currently in the process of being
 - [Ivan Oseledets](https://github.com/oseledets) (i.oseledets@skoltech.ru);
 - [Roman Schutski](https://github.com/Qbit-) (r.schutski@skoltech.ru);
 - [Konstantin Sozykin](https://github.com/gogolgrind) (konstantin.sozykin@skoltech.ru).
+
+
+## Citation
+
+If you find this approach and/or code useful in your research, please consider citing:
+
+```bibtex
+@article{sozykin2022ttopt,
+    author    = {Sozykin, Konstantin and Chertkov, Andrei and Schutski, Roman and Phan, Anh-Huy and Cichocki, Andrzej and Oseledets, Ivan},
+    year      = {2022},
+    title     = {TTOpt: A Maximum Volume Quantized Tensor Train-based Optimization and its Application to Reinforcement Learning},
+    journal   = {ArXiv},
+    volume    = {abs/2205.00293},
+    doi       = {10.48550/ARXIV.2205.00293},
+    url       = {https://arxiv.org/abs/2205.00293}
+}
+```
