@@ -1,11 +1,8 @@
-import sys
 from time import perf_counter as tpc
+from ttopt import TTOpt
 
 
 from opt import Opt
-
-
-from ttopt import TTOpt
 
 
 class OptTTOpt(Opt):
@@ -32,7 +29,7 @@ class OptTTOpt(Opt):
     def solve(self):
         t = tpc()
 
-        tto = TTOpt(
+        ttopt = TTOpt(
             self.f,
             d=self.d,
             a=self.a,
@@ -41,21 +38,15 @@ class OptTTOpt(Opt):
             p=self.p,
             q=self.q,
             evals=self.evals,
-            with_log=self.verb,
-            with_cache=False,
-            use_old=True
-            )
-        tto.minimize(self.r, fs_opt=None)
+            x_min_real=self.x_real,
+            y_min_real=self.y_real,
+            with_log=self.verb)
+        ttopt.minimize(self.r)
 
         self.t = tpc() - t
 
-        self.x = tto.x_min
-        self.y = tto.y_min
-
-        self.x_list = tto.x_min_list
-        self.y_list = tto.y_min_list
-        self.m_list = tto.evals_min_list
-        self.c_list = tto.cache_min_list
+        self.x = ttopt.x_min
+        self.y = ttopt.y_min
 
     def to_dict(self):
         res = super().to_dict()

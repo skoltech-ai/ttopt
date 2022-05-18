@@ -10,14 +10,14 @@ class Opt():
     """
     name = 'Base minimizer'
 
-    def __init__(self, func, verb=True):
-        self._f0 = func.calc     # Scalar function
-        self._f = func.comp      # Vector function
-        self.d = func.d          # Dimension
-        self.a = func.a          # Grid lower limit
-        self.b = func.b          # Grid upper limit
-        self.x_real = func.x_min # Real x (arg) for minimum (for error check)
-        self.y_real = func.y_min # Real y (f(x)) for minimum (for error check)
+    def __init__(self, func, d, a, b, x_min=None, y_min=None, verb=True):
+        self._f0 = func          # Scalar function
+        self._f = func           # Vector function
+        self.d = d               # Dimension
+        self.a = a               # Grid lower limit
+        self.b = b               # Grid upper limit
+        self.x_real = x_min      # Real x (arg) for minimum (for error check)
+        self.y_real = y_min      # Real y (f(x)) for minimum (for error check)
         self.verb = verb         # Verbosity of output (True/False)
 
         self.prep()
@@ -35,26 +35,11 @@ class Opt():
             return None
         return abs(self.y_real - self.y)
 
-    @property
-    def e_x_list(self):
-        if self.x_real is None:
-            return []
-        return [np.linalg.norm(self.x_real - x) for x in self.x_list]
-
-    @property
-    def e_y_list(self):
-        if self.y_real is None:
-            return []
-        return [abs(self.y_real - y) for y in self.y_list]
-
     def info(self, text_spec=''):
         text = ''
         text += f'{self.name}' + ' '*(12 - len(self.name)) + ' | '
 
         text += f't={self.t:-6.1f}'
-
-        #if self.e_x is not None:
-        #    text += f' | ex={self.e_x:-7.1e}'
 
         if self.e_y is not None:
             text += f' | ey={self.e_y:-7.1e}'
@@ -71,10 +56,6 @@ class Opt():
         self.m = 0               # Number of function calls
         self.x = None            # Found x (arg) for minimum
         self.y = None            # Found y (f(x)) for minimum
-        self.x_list = []         # Values of x while iterations
-        self.y_list = []         # Values of y while iterations
-        self.m_list = []         # Numbers of requested points related to y_list
-        self.c_list = []         # Numbers of requested cache points
 
         return self
 
@@ -84,13 +65,6 @@ class Opt():
 
     def f0_max(self, x):
         return -self.f0(x)
-
-    def f0_scipy(self, x):
-        y = self.f0(x)
-        self.x_list.append(x)
-        self.y_list.append(y)
-        self.m_list.append(1)
-        return y
 
     def f(self, X):
         self.m += X.shape[0]
@@ -113,15 +87,15 @@ class Opt():
             solver.tell(fitness_list)
             result = solver.result()
 
-            self.x_list.append(result[0])
-            self.y_list.append(result[1])
-            self.m_list.append(solver.popsize)
+            self.x = result[0]
+            self.y = result[1]
 
-            if self.verb and (j+1) % 100 == 0:
-                print("Fitness at iteration", (j+1), result[1])
-
-        self.x = self.x_list[-1]
-        self.y = self.y_list[-1]
+            if self.verb and (j+1) % 10 == 0:
+                text = ''
+                text += f'k={self.m:-8.2e} | '
+                text += f'iter={j+1:-6d} | '
+                text += f'e_y={self.e_y:-8.2e} '
+                print(text)
 
     def solve(self):
         raise NotImplementedError()
@@ -129,14 +103,13 @@ class Opt():
     def to_dict(self):
         return {
             'name': self.name,
+            'd': self.d,
             'a': self.a,
             'b': self.b,
             't': self.t,
             'm': self.m,
+            'y': self.y,
+            'y_real': self.y_real,
             'e_x': self.e_x,
             'e_y': self.e_y,
-            'e_x_list': self.e_x_list,
-            'e_y_list': self.e_y_list,
-            'm_list': self.m_list,
-            'c_list': self.c_list,
         }

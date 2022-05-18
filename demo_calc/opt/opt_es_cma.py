@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 from time import perf_counter as tpc
 
