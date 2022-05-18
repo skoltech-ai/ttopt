@@ -107,7 +107,8 @@ is convenient for debugging and testing/research).</p></li>
 <li><p><strong>is_func</strong> (<em>bool</em>) – if flag is True, then we minimize the function (the
 arguments of f correspond to continuous spatial points), otherwise
 we approximate the tensor (the arguments of f correspond to
-discrete multidimensional tensor indices). It is True by default.</p></li>
+discrete multidimensional tensor multi-indices). It is True by
+default.</p></li>
 <li><p><strong>is_vect</strong> (<em>bool</em>) – if flag is True, then function should accept 2D
 numpy array of the shape [samples, d] (batch of points or indices)
 and return 1D numpy array of the shape [samples]. Otherwise, the
@@ -127,10 +128,14 @@ default.</p></li>
 opts related to output y (scalar or vector) as second argument
 (it will be also saved and passed to “callback” function). It is
 False by default.</p></li>
-<li><p><strong>use_old</strong> (<em>bool</em>) – if flag is True, then old TTOpt algorithm will be used.</p></li>
+<li><p><strong>use_old</strong> (<em>bool</em>) – if flag is True, then old TTOpt algorithm will be used.
+This is relevant for the possibility of reproducing old
+calculations reflected in publications.</p></li>
 <li><p><strong>with_full_info</strong> (<em>bool</em>) – if flag is True, then the full information will
 be saved, including multi-indices of requested points (it is used
-by animation function). It is False by default.</p></li>
+by animation function) and best found multi-indices and points.
+Note that the inclusion of this flag can significantly slow down
+the process of the algorithm. It is False by default.</p></li>
 <li><p><strong>with_wrn</strong> (<em>bool</em>) – if flag is True, then warning messages will be
 presented (in the current version, it can only be messages about
 early convergence when using the cache). It is True by default.</p></li>
@@ -142,7 +147,8 @@ early convergence when using the cache). It is True by default.</p></li>
 <p>Call “calc” to evaluate function for one tensor multi-index and call
 “comp” to evaluate function in the set of multi-indices (both of these
 functions can be called regardless of the value of the flag “is_vect”).
-Call “minimize” to find the global minimum of the function of interest.</p>
+Call “minimize” to find the global minimum of the function of interest
+by the TTOpt-algorithm.</p>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="ttopt.ttopt.TTOpt._eval">
@@ -234,12 +240,6 @@ and related option value (opt_min).</p>
 <dd><p>Transform multiindices (samples) into grid points.</p>
 </dd></dl>
 
-<dl class="py property">
-<dt class="sig sig-object py" id="ttopt.ttopt.TTOpt.i_min">
-<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">i_min</span></span><a class="headerlink" href="#ttopt.ttopt.TTOpt.i_min" title="Permalink to this definition">¶</a></dt>
-<dd><p>Current approximation of argmin (ind) of the function of interest.</p>
-</dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="ttopt.ttopt.TTOpt.info">
 <span class="sig-name descname"><span class="pre">info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">with_e_x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">with_e_y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_final</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ttopt/ttopt.html#TTOpt.info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ttopt.ttopt.TTOpt.info" title="Permalink to this definition">¶</a></dt>
@@ -254,7 +254,7 @@ and related option value (opt_min).</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="ttopt.ttopt.TTOpt.minimize">
-<span class="sig-name descname"><span class="pre">minimize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fs_opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ttopt/ttopt.html#TTOpt.minimize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ttopt.ttopt.TTOpt.minimize" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">minimize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fs_opt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_opt_inner</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_opt_outer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_opt_rect</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_rnd_inner</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_rnd_outer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">J0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ttopt/ttopt.html#TTOpt.minimize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#ttopt.ttopt.TTOpt.minimize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform the function minimization process by TT-based approach.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -298,12 +298,6 @@ function “exp(-1 * fs_opt * (p - p0))” will be used.</p></li>
 <dt class="sig sig-object py" id="ttopt.ttopt.TTOpt.t_total_mean">
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">t_total_mean</span></span><a class="headerlink" href="#ttopt.ttopt.TTOpt.t_total_mean" title="Permalink to this definition">¶</a></dt>
 <dd><p>Average time spent to return one function value.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="ttopt.ttopt.TTOpt.x_min">
-<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">x_min</span></span><a class="headerlink" href="#ttopt.ttopt.TTOpt.x_min" title="Permalink to this definition">¶</a></dt>
-<dd><p>Current approximation of argmin of the function of interest.</p>
 </dd></dl>
 
 <dl class="py property">

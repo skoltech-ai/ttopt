@@ -2,7 +2,7 @@ Documentation
 =============
 
 :ttopt:
-    Gradient-free global optimization algorithm for multivariable functions based on the low rank tensor train (TT) format and maximum volume principle.
+    Gradient-free global optimization algorithm for multivariable functions and multidimensional arrays based on the low rank tensor train (TT) format and maximum volume principle.
 
 
 .. toctree::
@@ -29,3 +29,5 @@ The demo-scripts with detailed comments are collected in the folder `demo`:
 - `cache.py` - we find the minimum for the simple analytic function to demonstrate the usage of cache;
 
 - `tensor.py` - in this example we find the minimum for the multidimensional array/tensor (i.e., discrete function).
+
+- `tensor_init_spec` - we do almost the same as in the `tensor.py` script, but use special method of initialization (instead of a random tensor, we select a set of starting multi-indices for the search).

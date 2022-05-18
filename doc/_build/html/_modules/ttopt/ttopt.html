@@ -110,7 +110,8 @@
 <span class="sd">        is_func (bool): if flag is True, then we minimize the function (the</span>
 <span class="sd">            arguments of f correspond to continuous spatial points), otherwise</span>
 <span class="sd">            we approximate the tensor (the arguments of f correspond to</span>
-<span class="sd">            discrete multidimensional tensor indices). It is True by default.</span>
+<span class="sd">            discrete multidimensional tensor multi-indices). It is True by</span>
+<span class="sd">            default.</span>
 <span class="sd">        is_vect (bool): if flag is True, then function should accept 2D</span>
 <span class="sd">            numpy array of the shape [samples, d] (batch of points or indices)</span>
 <span class="sd">            and return 1D numpy array of the shape [samples]. Otherwise, the</span>
@@ -131,9 +132,13 @@
 <span class="sd">            (it will be also saved and passed to &quot;callback&quot; function). It is</span>
 <span class="sd">            False by default.</span>
 <span class="sd">        use_old (bool): if flag is True, then old TTOpt algorithm will be used.</span>
+<span class="sd">            This is relevant for the possibility of reproducing old</span>
+<span class="sd">            calculations reflected in publications.</span>
 <span class="sd">        with_full_info (bool): if flag is True, then the full information will</span>
 <span class="sd">            be saved, including multi-indices of requested points (it is used</span>
-<span class="sd">            by animation function). It is False by default.</span>
+<span class="sd">            by animation function) and best found multi-indices and points.</span>
+<span class="sd">            Note that the inclusion of this flag can significantly slow down</span>
+<span class="sd">            the process of the algorithm. It is False by default.</span>
 <span class="sd">        with_wrn (bool): if flag is True, then warning messages will be</span>
 <span class="sd">            presented (in the current version, it can only be messages about</span>
 <span class="sd">            early convergence when using the cache). It is True by default.</span>
@@ -142,12 +147,13 @@
 <span class="sd">        Call &quot;calc&quot; to evaluate function for one tensor multi-index and call</span>
 <span class="sd">        &quot;comp&quot; to evaluate function in the set of multi-indices (both of these</span>
 <span class="sd">        functions can be called regardless of the value of the flag &quot;is_vect&quot;).</span>
-<span class="sd">        Call &quot;minimize&quot; to find the global minimum of the function of interest.</span>
+<span class="sd">        Call &quot;minimize&quot; to find the global minimum of the function of interest</span>
+<span class="sd">        by the TTOpt-algorithm.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">evals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x_min_real</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_min_real</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">is_func</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">is_vect</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">with_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_log</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_opt</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_old</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_full_info</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">with_wrn</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="c1"># The target function and its dimension:</span>
+        <span class="c1"># Set the target function and its dimension:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">f</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">d</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
 
@@ -223,6 +229,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">t_minim</span> <span class="o">=</span> <span class="mi">0</span>    <span class="c1"># Total time of work for minimizator</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_opt</span> <span class="o">=</span> <span class="kc">None</span>    <span class="c1"># Function opts related to its output</span>
 
+        <span class="c1"># Current minima:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i_min</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_min</span> <span class="o">=</span> <span class="kc">None</span>
+
         <span class="c1"># Approximations for argmin/min/opts of the function while iterations:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">I_list</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">i_min_list</span> <span class="o">=</span> <span class="p">[]</span>
@@ -245,11 +255,6 @@
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_min</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_min_real</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">i_min</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Current approximation of argmin (ind) of the function of interest.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">i_min_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">i_min_list</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
-
-    <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">k_total</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Total number of requests (both function calls and cache usage).&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_cache</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_evals</span>
@@ -268,11 +273,6 @@
     <span class="k">def</span> <span class="nf">t_total_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Average time spent to return one function value.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">t_total</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_total</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_total</span> <span class="k">else</span> <span class="mf">0.</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">x_min</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Current approximation of argmin of the function of interest.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_min_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_min_list</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">y_min</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -430,15 +430,18 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">x_min</span> <span class="o">=</span> <span class="n">i_min</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_full_info</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">I_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i_min</span> <span class="o">=</span> <span class="n">i_min</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_min</span> <span class="o">=</span> <span class="n">x_min</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">i_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i_min</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">x_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_min</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">y_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y_min</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">opt_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">opt_min</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">evals_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k_evals_curr</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cache_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k_cache_curr</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_full_info</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">I_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">i_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">i_min</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_min_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_min</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
 
         <span class="n">is_better</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_min_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="p">(</span><span class="n">y_min</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_min_list</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">callback</span> <span class="ow">and</span> <span class="n">is_better</span><span class="p">:</span>
@@ -496,7 +499,7 @@
 
         <span class="k">return</span> <span class="n">text</span></div>
 
-<div class="viewcode-block" id="TTOpt.minimize"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.minimize">[docs]</a>    <span class="k">def</span> <span class="nf">minimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rmax</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">Y0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fs_opt</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+<div class="viewcode-block" id="TTOpt.minimize"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.minimize">[docs]</a>    <span class="k">def</span> <span class="nf">minimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rmax</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">Y0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fs_opt</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">add_opt_inner</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">add_opt_outer</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">add_opt_rect</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">add_rnd_inner</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">add_rnd_outer</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">J0</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Perform the function minimization process by TT-based approach.</span>
 
 <span class="sd">        Args:</span>
@@ -509,8 +512,15 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">t_minim</span> <span class="o">=</span> <span class="n">tpc</span><span class="p">()</span>
-        <span class="n">func</span> <span class="o">=</span> <span class="n">ttopt_old</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_old</span> <span class="k">else</span> <span class="n">ttopt</span>
-        <span class="n">i_min</span><span class="p">,</span> <span class="n">y_min</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">rmax</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Y0</span><span class="p">,</span> <span class="n">fs_opt</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_old</span><span class="p">:</span>
+            <span class="n">i_min</span><span class="p">,</span> <span class="n">y_min</span> <span class="o">=</span> <span class="n">ttopt_old</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">rmax</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Y0</span><span class="p">,</span>
+                <span class="n">fs_opt</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">i_min</span><span class="p">,</span> <span class="n">y_min</span> <span class="o">=</span> <span class="n">ttopt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">rmax</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Y0</span><span class="p">,</span>
+                <span class="n">fs_opt</span><span class="p">,</span> <span class="n">add_opt_inner</span><span class="p">,</span> <span class="n">add_opt_outer</span><span class="p">,</span> <span class="n">add_opt_rect</span><span class="p">,</span>
+                <span class="n">add_rnd_inner</span><span class="p">,</span> <span class="n">add_rnd_outer</span><span class="p">,</span> <span class="n">J0</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">t_minim</span> <span class="o">=</span> <span class="n">tpc</span><span class="p">()</span> <span class="o">-</span> <span class="n">t_minim</span></div>
 
 <div class="viewcode-block" id="TTOpt.qtt_parse_many"><a class="viewcode-back" href="../../ttopt.html#ttopt.ttopt.TTOpt.qtt_parse_many">[docs]</a>    <span class="k">def</span> <span class="nf">qtt_parse_many</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I_qtt</span><span class="p">):</span>
