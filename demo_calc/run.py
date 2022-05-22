@@ -2,6 +2,7 @@
 import argparse
 import numpy as np
 import pickle
+import random
 import sys
 
 
@@ -17,57 +18,51 @@ plt.rcParams.update(params)
 
 
 sys.path.append('./demo_calc/opt')
+from opt_tt_opt import OptTTOpt
 from opt_ga import OptGA
 from opt_es import OptES
 from opt_es_cma import OptESCMA
-from opt_tt_opt import OptTTOpt
+from opt_de import OptDE
+from opt_nb import OptNB
+from opt_pso import OptPSO
 
 
-from demo_func import DemoFuncAckley
-from demo_func import DemoFuncGrienwank
-from demo_func import DemoFuncMichalewicz
-from demo_func import DemoFuncRastrigin
-from demo_func import DemoFuncRosenbrock
-from demo_func import DemoFuncSchwefel
+from teneva import func_demo_all
 
 
 # Minimizer classes:
-OPTS = [OptTTOpt, OptGA, OptES, OptESCMA]
+OPTS = [OptTTOpt, OptGA, OptES, OptESCMA, OptDE, OptNB, OptPSO]
 
 
 # Minimizer names:
 OPT_NAMES = {
-    'GA': 'simpleGA',
+    'TTOpt': 'TTOpt',
+    'GA': 'GA',
     'ES-OpenAI': 'openES',
     'ES-CMA': 'cmaES',
-    'TTOpt': 'TTOpt'}
+    'DE': 'DE',
+    'NB': 'NB',
+    'PSO': 'PSO',
+}
 
 
-# Function classes:
-FUNCS = [
-    DemoFuncAckley,
-    DemoFuncGrienwank,
-    DemoFuncMichalewicz,
-    DemoFuncRastrigin,
-    DemoFuncRosenbrock,
-    DemoFuncSchwefel,
-]
+# Function names and possible dimensions (set "True" if works for any):
+FUNCS = {
+    'Ackley': True,
+    'Alpine': True,
+    'Brown': True,
+    'Exponential': True,
+    'Grienwank': True,
+    'Michalewicz': [10],
+    'Qing': True,
+    'Rastrigin': True,
+    'Schaffer': True,
+    'Schwefel': True,
+}
 
 
-# Function names:
-FUNC_NAMES = [
-    'Ackley',
-    'Grienwank',
-    'Michalewicz',
-    'Rastrigin',
-    'Rosenbrock',
-    'Schwefel']
-
-
-# List of ranks to check dependency of TTOpt on rank:
-# D_LIST = [10, 50, 100, 500]
-D_LIST = [25, 250]
-
+# List of dimensions to check the TTOpt for multi-dim case:
+D_LIST = [10, 50, 100, 500]
 
 # List of ranks to check dependency of TTOpt on rank:
 R_LIST = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -77,12 +72,38 @@ R_LIST = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 N_LIST = [2**8, 2**10, 2**12, 2**14, 2**16, 2**18, 2**20]
 
 
-# List of numbers of function calls to check the related dependency:
+# List of numbers of function calls to check the dependency:
 EVALS_LIST = [1.E+4, 5.E+4, 1.E+5, 5.E+5, 1.E+6, 5.E+6, 1.E+7]
 
 
 # Population size for genetic-based algorithms:
 GA_POPSIZE = 255
+
+
+def get_funcs(d):
+    names = []
+    for name, dims in FUNCS.items():
+        if isinstance(dims, list):
+            if not d in dims:
+                continue
+        elif not dims:
+            continue
+        names.append(name)
+    return func_demo_all(d, names=names)
+
+
+def get_opt(func, opt_class, n, p, q, r, evals, with_log=False):
+    opt = opt_class(func.get_f_poi, func.d, func.a, func.b,
+        func.x_min, func.y_min, verb=with_log)
+
+    if opt.name == 'TTOpt':
+        opt.prep(n, p, q, r, evals)
+    elif opt.name in ['DE', 'NB', 'PSO']:
+        opt.prep(evals)
+    else:
+        opt.prep(popsize=GA_POPSIZE, iters=evals/GA_POPSIZE)
+
+    return opt
 
 
 def load(d, name, kind):
@@ -97,8 +118,9 @@ def load(d, name, kind):
 
 
 def log(text, d, name, kind, is_init=False):
-    fpath = f'./demo_calc/res_logs/{name}_{kind}_{d}dim.txt'
     print(text)
+
+    fpath = f'./demo_calc/res_logs/{name}_{kind}_{d}dim.txt'
     with open(fpath, 'w' if is_init else 'a') as f:
         f.write(text + '\n')
 
@@ -108,68 +130,60 @@ def run_comp(d, p, q, r, evals, reps=1, name='calc1', with_log=False):
     log(f'', d, name, 'comp', is_init=True)
     res = {}
 
-    for func_class in FUNCS:
-        func = func_class(d)
+    for func in get_funcs(d):
         log(f'--- Minimize function {func.name}-{d}dim\n', d, name, 'comp')
-
-        if d != 10 and func.name == 'Michalewicz':
-            continue
-
         res[func.name] = {}
 
         for opt_class in OPTS:
-            opt = opt_class(func, verb=with_log)
-            if opt.name == 'TTOpt':
-                opt.prep(None, p, q, r, evals)
-            else:
-                if d != 10: # TODO: remove
-                    continue
-                opt.prep(popsize=GA_POPSIZE, iters=evals/GA_POPSIZE)
-
+            opt = get_opt(func, opt_class, None, p, q, r, evals, with_log)
             res[func.name][opt.name] = solve(opt, d, name, 'comp', reps)
+
             save(res, d, name, 'comp')
 
         log('\n\n', d, name, 'comp')
 
 
-def run_dim(p, q, r, reps=1, name='calc1', with_log=False):
+def run_dims(p, q, r, reps=1, name='calc1', with_log=False, evals_par=1.E+4):
     """Solve for different dimension numbers."""
     d0 = D_LIST[-1]
-    log(f'', d0, name, 'dim', is_init=True)
+
+    log(f'', d0, name, 'dims', is_init=True)
     res = {}
 
     for d in D_LIST:
-        evals = int(1.E+4 * d)
+        evals = int(evals_par * d)
         res[d] = {}
-        for func_class in FUNCS:
-            func = func_class(d)
-            if func.name == 'Michalewicz':
-                continue
 
-            log(f'--- Minimize function {func.name}-{d}dim', d0, name, 'dim')
+        for func in get_funcs(d):
+            log(f'--- Minimize function {func.name}-{d}dim', d0, name, 'dims')
 
-            opt = OptTTOpt(func, verb=with_log)
-            opt.prep(None, p, q, r, evals)
+            opt = get_opt(func, OptTTOpt, None, p, q, r, evals, with_log)
 
-            res[d][func.name] = solve(opt, d, name, 'dim', reps, d0)
-            save(res, d0, name, 'dim')
+            res[d][func.name] = solve(opt, d, name, 'dims', reps, d0)
 
-            log('', d0, name, 'dim')
+            save(res, d0, name, 'dims')
+
+            log('', d0, name, 'dims')
+
+            # TODO Remove later:
+            break
 
 
 def run_iter(d, p, q, r, reps=1, name='calc1', with_log=False):
     """Check dependency of TTOpt on evals for benchmark analytic functions."""
     log(f'', d, name, 'iter', is_init=True)
     res = {}
-    for func_class in FUNCS:
-        func = func_class(d)
+
+    for func in get_funcs(d):
         log(f'--- Minimize function {func.name}-{d}dim\n', d, name, 'iter')
         res[func.name] = []
+
         for evals in EVALS_LIST:
-            opt = OptTTOpt(func, verb=with_log)
-            opt.prep(None, p, q, r, evals)
+            opt = get_opt(func, OptTTOpt, None, p, q, r, evals, with_log)
             res[func.name].append(solve(opt, d, name, 'iter', reps))
+
             save(res, d, name, 'iter')
+
         log('\n\n', d, name, 'iter')
 
 
@@ -178,8 +192,7 @@ def run_quan(d, r, evals, reps=1, name='calc1', with_log=False):
     log(f'', d, name, 'quan', is_init=True)
     res = {}
 
-    for func_class in FUNCS:
-        func = func_class(d)
+    for func in get_funcs(d):
         log(f'--- Minimize function {func.name}-{d}dim\n', d, name, 'quan')
 
         res[func.name] = {'q0': [], 'q2': [], 'q4': []}
@@ -192,19 +205,17 @@ def run_quan(d, r, evals, reps=1, name='calc1', with_log=False):
             if 2**q2 != n or 4**q4 != n:
                 raise ValueError(f'Invalid grid size "{n}"')
 
-            opt = OptTTOpt(func, verb=with_log)
-            opt.prep(n, None, None, r, evals)
+            opt = get_opt(func, OptTTOpt, n, None, None, r, evals, with_log)
             res[func.name]['q0'].append(solve(opt, d, name, 'quan', reps))
 
-            opt = OptTTOpt(func, verb=with_log)
-            opt.prep(None, 2, q2, r, evals)
+            opt = get_opt(func, OptTTOpt, None, 2, q2, r, evals, with_log)
             res[func.name]['q2'].append(solve(opt, d, name, 'quan', reps))
 
-            opt = OptTTOpt(func, verb=with_log)
-            opt.prep(None, 4, q4, r, evals)
+            opt = get_opt(func, OptTTOpt, None, 4, q4, r, evals, with_log)
             res[func.name]['q4'].append(solve(opt, d, name, 'quan', reps))
 
-        save(res, d, name, 'quan')
+            save(res, d, name, 'quan')
+
         log('\n\n', d, name, 'quan')
 
 
@@ -212,15 +223,16 @@ def run_rank(d, p, q, evals, reps=1, name='calc1', with_log=False):
     """Check dependency of TTOpt on rank for benchmark analytic functions."""
     log(f'', d, name, 'rank', is_init=True)
     res = {}
-    for func_class in FUNCS:
-        func = func_class(d)
+    for func in get_funcs(d):
         log(f'--- Minimize function {func.name}-{d}dim\n', d, name, 'rank')
         res[func.name] = []
+
         for r in R_LIST:
-            opt = OptTTOpt(func, verb=with_log)
-            opt.prep(None, p, q, r, evals)
+            opt = get_opt(func, OptTTOpt, None, p, q, r, evals, with_log)
             res[func.name].append(solve(opt, d, name, 'rank', reps))
+
             save(res, d, name, 'rank')
+
         log('\n\n', d, name, 'rank')
 
 
@@ -228,6 +240,7 @@ def run_show(d, name='calc1'):
     """Show results of the previous calculations."""
     log(f'', d, name, 'show', is_init=True)
     run_show_comp(d, name)
+    run_show_dims(D_LIST[-1], name)
     run_show_iter(d, name)
     run_show_quan(d, name)
     run_show_rank(d, name)
@@ -245,12 +258,12 @@ def run_show_comp(d, name='calc1'):
     text += '% ------ AUTO CODE START\n\n'
 
     for name_opt, name_opt_text in OPT_NAMES.items():
-        text += '\\multirow{2}{*}{' + name_opt_text + '}'
+        text += '\\multirow{2}{*}{\\func{' + name_opt_text + '}}'
 
         text += '\n& $\\epsilon$ '
-        for name_func in FUNC_NAMES:
-            v = res[name_func][name_opt]['e']
-            vals = [res[name_func][nm]['e']
+        for func in get_funcs(d):
+            v = res[func.name][name_opt]['e']
+            vals = [res[func.name][nm]['e']
                 for nm in OPT_NAMES.keys() if nm != name_opt]
             if v <= np.min(vals):
                 text += '& \\textbf{' + f'{v:-8.1e}' + '} '
@@ -260,8 +273,8 @@ def run_show_comp(d, name='calc1'):
         text += '\n\\\\'
 
         text += '\n& $\\tau$ '
-        for name_func in FUNC_NAMES:
-            v = res[name_func][name_opt]['t']
+        for func in get_funcs(d):
+            v = res[func.name][name_opt]['t']
             text += '& \\textit{' + f'{v:-6.2f}' + '} '
 
         text += ' \\\\ \\hline \n\n'
@@ -269,6 +282,29 @@ def run_show_comp(d, name='calc1'):
     text += '% ------ AUTO CODE END\n\n'
 
     log(text, d, name, 'show')
+
+
+def run_show_dims(d, name='calc1'):
+    res = load(d, name, 'dims')
+    if res is None:
+        log('>>> Dims-result is not available', d, name, 'show')
+        return
+
+    text = '>>> Dims-result: \n\n'
+
+    for d in D_LIST:
+        for func in get_funcs(d):
+            item = res[d][func.name]
+            e = item['e']
+            t = item['t']
+            m = item['evals']
+
+            text += f'{func.name} | d = {d:-5d} | '
+            text += f'e = {e:-7.1e} | t = {t:.2f} | '
+            text += f'evals = {m:-7.1e}\n'
+            break # TODO Remove later
+
+    log(text, d, name, 'dims')
 
 
 def run_show_iter(d, name='calc1'):
@@ -284,9 +320,9 @@ def run_show_iter(d, name='calc1'):
     plt.xlabel('number of queries')
     plt.ylabel('absolute error')
 
-    for name_func in FUNC_NAMES:
-        v = [item['e'] for item in res[name_func]]
-        plt.plot(EVALS_LIST, v, label=name_func, marker='o')
+    for func in get_funcs(d):
+        v = [item['e'] for item in res[func.name]]
+        plt.plot(EVALS_LIST, v, label=func.name, marker='o')
 
     plt.grid()
     plt.semilogx()
@@ -315,14 +351,14 @@ def run_show_quan(d, name='calc1'):
         text += '\\multirow{2}{*}{' + str(n) + '}'
 
         text += '\n& TT '
-        for name_func in FUNC_NAMES:
-            v = res[name_func]['q0'][i]['e']
+        for func in get_funcs(d):
+            v = res[func.name]['q0'][i]['e']
             text += f'& {v:-8.1e} '
         text += '\\\\'
 
         text += '\n& QTT '
-        for name_func in FUNC_NAMES:
-            v = res[name_func]['q2'][i]['e']
+        for func in get_funcs(d):
+            v = res[func.name]['q2'][i]['e']
             text += f'& {v:-8.1e} '
         text += ' \\\\ \\hline \n'
 
@@ -345,9 +381,9 @@ def run_show_rank(d, name='calc1'):
     plt.ylabel('absolute error')
     plt.xticks(R_LIST)
 
-    for name_func in FUNC_NAMES:
-        v = [item['e'] for item in res[name_func]]
-        plt.plot(R_LIST, v, label=name_func, marker='o')
+    for func in get_funcs(d):
+        v = [item['e'] for item in res[func.name]]
+        plt.plot(R_LIST, v, label=func.name, marker='o')
 
     plt.grid()
     plt.semilogy()
@@ -370,6 +406,7 @@ def solve(opt, d, name, kind, reps=1, d_log=None):
     t, y, e, m = [], [], [], []
     for rep in range(reps):
         np.random.seed(rep)
+        random.seed(rep)
 
         opt.init()
         opt.solve()
@@ -380,7 +417,10 @@ def solve(opt, d, name, kind, reps=1, d_log=None):
         y.append(opt.y)
         e.append(opt.e_y)
         m.append(opt.m)
-    print(f'{np.mean(e):-7.1e} {np.mean(t):.2f}')
+
+    if reps > 1:
+        print(f'--> Mean error / time : {np.mean(e):-7.1e} / {np.mean(t):.2f}')
+
     return {
         't': np.mean(t),
         'e': np.mean(e),
@@ -406,13 +446,13 @@ if __name__ == '__main__':
     parser.add_argument('-r', default=4,
         type=int, help='rank')
     parser.add_argument('--evals', default=1.E+5,
-        type=float, help='evals')
+        type=float, help='computational budget')
     parser.add_argument('--reps', default=1,
-        type=int, help='repetitions (only for TTOpt method)')
+        type=int, help='repetitions')
     parser.add_argument('--name', default='calc1',
         type=str, help='calculation name (the corresponding prefix will be used for the files with results)')
     parser.add_argument('--kind', default='comp',
-        type=str, help='kind of calculation ("comp" - compare different solvers; "iter" - check dependency on number of calls for target function; "quan" - check effect of qtt-usage; "rank" - check dependency on rank; "show" - show results of the previous calculations)')
+        type=str, help='kind of calculation ("comp" - compare different solvers; "dims" - check dependency on dimension number; "iter" - check dependency on number of calls for target function; "quan" - check effect of qtt-usage; "rank" - check dependency on rank; "show" - show results of the previous calculations)')
     parser.add_argument('--verb', default=False,
         type=bool, help='if True, then intermediate results of the optimization process will be printed to the console')
 
@@ -421,8 +461,8 @@ if __name__ == '__main__':
     if args.kind == 'comp':
         run_comp(args.d, args.p, args.q, args.r, args.evals, args.reps,
             args.name, args.verb)
-    if args.kind == 'dim':
-        run_dim(args.p, args.q, args.r, args.reps,
+    elif args.kind == 'dims':
+        run_dims(args.p, args.q, args.r, args.reps,
             args.name, args.verb)
     elif args.kind == 'iter':
         run_iter(args.d, args.p, args.q, args.r, args.reps,
