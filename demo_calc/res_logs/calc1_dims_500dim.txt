@@ -38,3 +38,10 @@ Ackley | d =    50 | e = 3.9e-06 | t = 40.12 | evals = 5.0e+05
 Ackley | d =   100 | e = 3.9e-06 | t = 143.86 | evals = 1.0e+06
 Ackley | d =   500 | e = 3.9e-06 | t = 3385.34 | evals = 5.0e+06
 
+>>> Dims-result: 
+
+Ackley | d =    10 | e = 3.9e-06 | t = 3.07 | evals = 1.0e+05
+Ackley | d =    50 | e = 3.9e-06 | t = 40.12 | evals = 5.0e+05
+Ackley | d =   100 | e = 3.9e-06 | t = 143.86 | evals = 1.0e+06
+Ackley | d =   500 | e = 3.9e-06 | t = 3385.34 | evals = 5.0e+06
+
