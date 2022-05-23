@@ -165,9 +165,6 @@ def run_dims(p, q, r, reps=1, name='calc1', with_log=False, evals_par=1.E+4):
 
             log('', d0, name, 'dims')
 
-            # TODO Remove later:
-            break
-
 
 def run_iter(d, p, q, r, reps=1, name='calc1', with_log=False):
     """Check dependency of TTOpt on evals for benchmark analytic functions."""
