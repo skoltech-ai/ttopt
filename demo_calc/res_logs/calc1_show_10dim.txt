@@ -41,7 +41,11 @@
 % ------ AUTO CODE END
 
 
->>> Iter-result is not available
+>>> Iter-result (png file with plot): 
+
+Figure saved to file "./demo_calc/res_plot/calc1_iter_10dim.png"
+
+
 >>> Quan-result (part of latex table): 
 
 % ------ AUTO CODE START
