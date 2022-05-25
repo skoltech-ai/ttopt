@@ -41,6 +41,138 @@
 % ------ AUTO CODE END
 
 
+>>> Dims-result: 
+
+% ------ AUTO CODE START
+\multirow{2}{*}{\emph{F1}}
+& $\epsilon$ 
+&  3.9e-06
+&  3.9e-06
+&  3.9e-06
+&  3.9e-06
+\\ 
+& $\tau$ 
+& \textit{3.1}
+& \textit{37.8}
+& \textit{131.0}
+& \textit{3153.5}
+\\ \hline 
+
+\multirow{2}{*}{\emph{F2}}
+& $\epsilon$ 
+&  2.9e-07
+&  3.7e-06
+&  5.2e-06
+&  2.1e-05
+\\ 
+& $\tau$ 
+& \textit{2.5}
+& \textit{36.3}
+& \textit{129.5}
+& \textit{3153.1}
+\\ \hline 
+
+\multirow{2}{*}{\emph{F3}}
+& $\epsilon$ 
+&  2.3e-12
+&  4.9e-10
+&  1.1e-09
+&  4.7e-09
+\\ 
+& $\tau$ 
+& \textit{2.6}
+& \textit{36.8}
+& \textit{132.6}
+& \textit{3205.4}
+\\ \hline 
+
+\multirow{2}{*}{\emph{F4}}
+& $\epsilon$ 
+&  4.4e-15
+&  2.2e-14
+&  4.4e-14
+&  1.0e+00
+\\ 
+& $\tau$ 
+& \textit{2.5}
+& \textit{35.6}
+& \textit{129.2}
+& \textit{3131.1}
+\\ \hline 
+
+\multirow{2}{*}{\emph{F5}}
+& $\epsilon$ 
+&  2.5e-02
+&  3.7e-02
+&  3.7e-02
+&  3.7e-02
+\\ 
+& $\tau$ 
+& \textit{2.5}
+& \textit{36.1}
+& \textit{130.4}
+& \textit{3132.2}
+\\ \hline 
+
+\multirow{2}{*}{\emph{F6}}
+& $\epsilon$ 
+&  5.5e-09
+&  8.9e-08
+&  3.4e-07
+&  5.6e+02
+\\ 
+& $\tau$ 
+& \textit{2.5}
+& \textit{35.6}
+& \textit{130.2}
+& \textit{3123.7}
+\\ \hline 
+
+\multirow{2}{*}{\emph{F7}}
+& $\epsilon$ 
+&  4.6e-11
+&  2.3e-10
+&  4.6e-10
+&  2.3e-09
+\\ 
+& $\tau$ 
+& \textit{2.5}
+& \textit{35.6}
+& \textit{130.1}
+& \textit{3124.0}
+\\ \hline 
+
+\multirow{2}{*}{\emph{F8}}
+& $\epsilon$ 
+&  3.4e-01
+&  9.3e-01
+&  2.2e+00
+&  1.0e+01
+\\ 
+& $\tau$ 
+& \textit{2.5}
+& \textit{36.0}
+& \textit{130.6}
+& \textit{3157.4}
+\\ \hline 
+
+\multirow{2}{*}{\emph{F9}}
+& $\epsilon$ 
+&  1.3e-04
+&  6.4e-04
+&  1.3e-03
+&  6.4e-03
+\\ 
+& $\tau$ 
+& \textit{2.6}
+& \textit{35.7}
+& \textit{130.0}
+& \textit{3140.7}
+\\ \hline 
+
+% ------ AUTO CODE END
+
+
 >>> Iter-result (png file with plot): 
 
 Figure saved to file "./demo_calc/res_plot/calc1_iter_10dim.png"

@@ -237,7 +237,7 @@ def run_show(d, name='calc1'):
     """Show results of the previous calculations."""
     log(f'', d, name, 'show', is_init=True)
     run_show_comp(d, name)
-    run_show_dims(D_LIST[-1], name)
+    run_show_dims(d, D_LIST[-1], name)
     run_show_iter(d, name)
     run_show_quan(d, name)
     run_show_rank(d, name)
@@ -281,27 +281,38 @@ def run_show_comp(d, name='calc1'):
     log(text, d, name, 'show')
 
 
-def run_show_dims(d, name='calc1'):
-    res = load(d, name, 'dims')
+def run_show_dims(d0, d_max, name='calc1'):
+    res = load(d_max, name, 'dims')
     if res is None:
-        log('>>> Dims-result is not available', d, name, 'show')
+        log('>>> Dims-result is not available', d0, name, 'show')
         return
 
     text = '>>> Dims-result: \n\n'
 
-    for d in D_LIST:
-        for func in get_funcs(d):
-            item = res[d][func.name]
+    text += '% ------ AUTO CODE START\n'
+
+    for i, name_func in enumerate(res[d_max].keys(), 1):
+        text += '\\multirow{2}{*}{\\emph{F' + str(i) + '}}\n'
+
+        text += '& $\\epsilon$ \n'
+        for d in D_LIST:
+            item = res[d][name_func]
             e = item['e']
+            text += '& ' + f'{e:-8.1e}' + '\n'
+
+        text += '\\\\ \n'
+
+        text += '& $\\tau$ \n'
+        for d in D_LIST:
+            item = res[d][name_func]
             t = item['t']
-            m = item['evals']
+            text += '& \\textit{' + f'{t:-.1f}' + '}\n'
 
-            text += f'{func.name} | d = {d:-5d} | '
-            text += f'e = {e:-7.1e} | t = {t:.2f} | '
-            text += f'evals = {m:-7.1e}\n'
-            break # TODO Remove later
+        text += '\\\\ \\hline \n\n'
 
-    log(text, d, name, 'dims')
+    text += '% ------ AUTO CODE END\n\n'
+
+    log(text, d0, name, 'show')
 
 
 def run_show_iter(d, name='calc1'):
@@ -313,18 +324,18 @@ def run_show_iter(d, name='calc1'):
 
     text = '>>> Iter-result (png file with plot): \n\n'
 
-    plt.figure(figsize=(14, 8))
+    plt.figure(figsize=(16, 8))
     plt.xlabel('number of queries')
     plt.ylabel('absolute error')
 
-    for func in get_funcs(d):
+    for i, func in enumerate(get_funcs(d), 1):
         v = [item['e'] for item in res[func.name]]
-        plt.plot(EVALS_LIST, v, label=func.name, marker='o')
+        plt.plot(EVALS_LIST, v, label=f'F{i}', marker='o')
 
     plt.grid()
     plt.semilogx()
     plt.semilogy()
-    plt.legend(loc='best')
+    plt.legend(loc='best', ncol=5, fontsize=20)
 
     fpath = f'./demo_calc/res_plot/{name}_iter_{d}dim.png'
     plt.savefig(fpath, bbox_inches='tight')
@@ -373,18 +384,18 @@ def run_show_rank(d, name='calc1'):
 
     text = '>>> Rank-result (png file with plot): \n\n'
 
-    plt.figure(figsize=(14, 8))
+    plt.figure(figsize=(16, 8))
     plt.xlabel('rank')
     plt.ylabel('absolute error')
     plt.xticks(R_LIST)
 
-    for func in get_funcs(d):
+    for i, func in enumerate(get_funcs(d), 1):
         v = [item['e'] for item in res[func.name]]
-        plt.plot(R_LIST, v, label=func.name, marker='o')
+        plt.plot(R_LIST, v, label=f'F{i}', marker='o')
 
     plt.grid()
     plt.semilogy()
-    plt.legend(loc='best')
+    plt.legend(loc='best', ncol=5, fontsize=20)
 
     fpath = f'./demo_calc/res_plot/{name}_rank_{d}dim.png'
     plt.savefig(fpath, bbox_inches='tight')

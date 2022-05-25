@@ -109,11 +109,3 @@ TTOpt        | t=3157.4 | ey=1.0e+01 | evals=5.0e+06 | p=2, q=25, r=  4
 
 --- Minimize function Schwefel-500dim
 TTOpt        | t=3140.7 | ey=6.4e-03 | evals=5.0e+06 | p=2, q=25, r=  4
-
->>> Dims-result: 
-
-Ackley | d =    10 | e = 3.9e-06 | t = 3.08 | evals = 1.0e+05
-Ackley | d =    50 | e = 3.9e-06 | t = 37.81 | evals = 5.0e+05
-Ackley | d =   100 | e = 3.9e-06 | t = 131.03 | evals = 1.0e+06
-Ackley | d =   500 | e = 3.9e-06 | t = 3153.52 | evals = 5.0e+06
-
