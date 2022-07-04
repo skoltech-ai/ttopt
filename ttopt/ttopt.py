@@ -442,12 +442,14 @@ class TTOpt():
         text = ''
 
         if self.name:
-            text += self.name + f'-{self.d}d | '
+            name = self.name + f'-{self.d}d'
+            name += ' ' * max(0, 10 - len(name))
+            text += name + ' | '
 
         if self.with_cache:
-            text += f'k={self.k_evals:-8.2e}+{self.k_cache:-8.2e} | '
+            text += f'evals={self.k_evals:-8.2e}+{self.k_cache:-8.2e} | '
         else:
-            text += f'k={self.k_total:-8.2e} | '
+            text += f'evals={self.k_total:-8.2e} | '
 
         if is_final:
             text += f't_all={self.t_minim:-8.2e} | '
@@ -455,7 +457,7 @@ class TTOpt():
             text += f't_cur={self.t_total:-8.2e} | '
 
         if self.y_min_real is None and self.y_min is not None:
-            text += f'y={self.y_min:-.6f} '
+            text += f'y={self.y_min:-13.6e} '
         else:
             if with_e_x and self.e_x is not None:
                 text += f'e_x={self.e_x:-8.2e} '
