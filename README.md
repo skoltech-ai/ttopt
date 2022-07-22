@@ -14,6 +14,7 @@
     ```bash
     pip install maxvolpy
     ```
+    > Note that [teneva](https://github.com/AndreiChertkov/teneva) python package may be used instead (`pip install teneva`)
 4. Install dependencies for demo calculations (it is optional):
     ```bash
     pip install matplotlib cma nevergrad pyproj teneva
