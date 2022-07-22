@@ -231,6 +231,10 @@ def _iter(Z, J, Jg, l2r=True, add_opt_inner=True, add_opt_rect=False, add_rnd_in
 
 
 def _maxvol(A, tol=1.001, max_iters=1000, is_rect=False):
+    n, r = A.shape
+    if n <= r:
+        return np.arange(n, dtype=int)
+
     if WITH_MAXVOLPY:
         return _maxvol_maxvolpy(A, tol, max_iters, is_rect)
     else:
