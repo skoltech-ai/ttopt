@@ -4,7 +4,6 @@ from time import perf_counter as tpc
 
 from .ttopt_raw import ttopt
 from .ttopt_raw import ttopt_find
-from .ttopt_raw_old import ttopt as ttopt_old
 
 
 class TTOpt():
@@ -96,9 +95,6 @@ class TTOpt():
             opts related to output y (scalar or vector) as second argument
             (it will be also saved and passed to "callback" function). It is
             False by default.
-        use_old (bool): if flag is True, then old TTOpt algorithm will be used.
-            This is relevant for the possibility of reproducing old
-            calculations reflected in publications.
         with_full_info (bool): if flag is True, then the full information will
             be saved, including multi-indices of requested points (it is used
             by animation function) and best found multi-indices and points.
@@ -117,7 +113,7 @@ class TTOpt():
 
     """
 
-    def __init__(self, f, d, a=None, b=None, n=None, p=None, q=None, evals=None, name=None, callback=None, x_min_real=None, y_min_real=None, is_func=True, is_vect=True, with_cache=False, with_log=False, with_opt=False, use_old=False, with_full_info=False, with_wrn=True):
+    def __init__(self, f, d, a=None, b=None, n=None, p=None, q=None, evals=None, name=None, callback=None, x_min_real=None, y_min_real=None, is_func=True, is_vect=True, with_cache=False, with_log=False, with_opt=False, with_full_info=False, with_wrn=True):
         # Set the target function and its dimension:
         self.f = f
         self.d = int(d)
@@ -178,7 +174,6 @@ class TTOpt():
         self.with_cache = bool(with_cache)
         self.with_log = bool(with_log)
         self.with_opt = bool(with_opt)
-        self.use_old = bool(use_old)
         self.with_full_info = bool(with_full_info)
         self.with_wrn = bool(with_wrn)
 
@@ -480,11 +475,7 @@ class TTOpt():
         """
         t_minim = tpc()
 
-        if self.use_old:
-            i_min, y_min = ttopt_old(self.comp_min, self.n, rmax, None, Y0,
-                fs_opt)
-        else:
-            i_min, y_min = ttopt(self.comp_min, self.n, rmax, None, Y0,
+        i_min, y_min = ttopt(self.comp_min, self.n, rmax, None, Y0,
                 fs_opt, add_opt_inner, add_opt_outer, add_opt_rect,
                 add_rnd_inner, add_rnd_outer, J0)
 
