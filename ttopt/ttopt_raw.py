@@ -20,7 +20,7 @@ try:
 except Exception as e:
     from teneva import maxvol
     from teneva import maxvol_rect as rect_maxvol
-    WITH_MAXVOLPY = True
+    WITH_MAXVOLPY = False
 
 
 import numpy as np
