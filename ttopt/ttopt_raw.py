@@ -22,6 +22,7 @@ except Exception as e:
     from teneva import maxvol_rect as rect_maxvol
     WITH_MAXVOLPY = True
 
+
 import numpy as np
 
 

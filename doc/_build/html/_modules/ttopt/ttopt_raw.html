@@ -48,8 +48,16 @@
 <span class="sd">    first argument (the method &quot;TTOpt.minimize&quot; provides the related interface).</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">from</span> <span class="nn">maxvolpy.maxvol</span> <span class="kn">import</span> <span class="n">maxvol</span>
-<span class="kn">from</span> <span class="nn">maxvolpy.maxvol</span> <span class="kn">import</span> <span class="n">rect_maxvol</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">maxvolpy.maxvol</span> <span class="kn">import</span> <span class="n">maxvol</span>
+    <span class="kn">from</span> <span class="nn">maxvolpy.maxvol</span> <span class="kn">import</span> <span class="n">rect_maxvol</span>
+    <span class="n">WITH_MAXVOLPY</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">teneva</span> <span class="kn">import</span> <span class="n">maxvol</span>
+    <span class="kn">from</span> <span class="nn">teneva</span> <span class="kn">import</span> <span class="n">maxvol_rect</span> <span class="k">as</span> <span class="n">rect_maxvol</span>
+    <span class="n">WITH_MAXVOLPY</span> <span class="o">=</span> <span class="kc">True</span>
+
+
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 
@@ -258,6 +266,13 @@
 
 
 <span class="k">def</span> <span class="nf">_maxvol</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.001</span><span class="p">,</span> <span class="n">max_iters</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">is_rect</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">WITH_MAXVOLPY</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_maxvol_maxvolpy</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">max_iters</span><span class="p">,</span> <span class="n">is_rect</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_maxvol_teneva</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">max_iters</span><span class="p">,</span> <span class="n">is_rect</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_maxvol_maxvolpy</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.001</span><span class="p">,</span> <span class="n">max_iters</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">is_rect</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">is_rect</span><span class="p">:</span>
         <span class="n">tol_rect</span> <span class="o">=</span> <span class="mf">1.</span>
         <span class="n">kickrank</span> <span class="o">=</span> <span class="mi">1</span>
@@ -272,6 +287,13 @@
             <span class="n">start_maxvol_iters</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">identity_submatrix</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">maxvol</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">max_iters</span><span class="o">=</span><span class="n">max_iters</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">_maxvol_teneva</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1.001</span><span class="p">,</span> <span class="n">max_iters</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">is_rect</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">is_rect</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">rect_maxvol</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">dr_min</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dr_max</span><span class="o">=</span><span class="mi">2</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">maxvol</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">max_iters</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
 
 <span class="k">def</span> <span class="nf">_merge</span><span class="p">(</span><span class="n">J1</span><span class="p">,</span> <span class="n">J2</span><span class="p">,</span> <span class="n">Jg</span><span class="p">):</span>
