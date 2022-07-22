@@ -26,7 +26,7 @@ except Exception as e:
 import numpy as np
 
 
-def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1., add_opt_inner=True, add_opt_outer=False, add_opt_rect=False, add_rnd_inner=False, add_rnd_outer=False, J0=None):
+def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1., add_opt_inner=True, add_opt_outer=False, add_opt_rect=False, add_rnd_inner=False, add_rnd_outer=False, J0=None, is_max=False):
     """Find the minimum element of the implicitly given multidimensional array.
 
     This function computes the minimum of the implicitly given d-dimensional
@@ -117,7 +117,8 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1., add_opt_inner=True, add_
             return i_min, y_min
 
         # We find and check the minimum value on a set of sampled points:
-        i_min, y_min, opt_min = ttopt_find(I, y, opt, i_min, y_min, opt_min)
+        i_min, y_min, opt_min = ttopt_find(I, y, opt, i_min, y_min, opt_min,
+            is_max)
 
         # If the max number of requests exceeded, we interrupt the algorithm:
         eval += y.size
@@ -130,7 +131,8 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1., add_opt_inner=True, add_
 
         # We transform sampled points into "core tensor" and smooth it out:
         Z = _reshape(y, (r[i], n[i], r[i + 1]))
-        Z = ttopt_fs(Z, y_min, fs_opt)
+        if not is_max:
+            Z = ttopt_fs(Z, y_min, fs_opt)
 
         # We perform iteration:
         if l2r and i < d - 1:
@@ -156,12 +158,18 @@ def ttopt(f, n, rmax=5, evals=None, Y0=None, fs_opt=1., add_opt_inner=True, add_
     return i_min, y_min
 
 
-def ttopt_find(I, y, opt, i_min, y_min, opt_min):
+def ttopt_find(I, y, opt, i_min, y_min, opt_min, is_max=False):
     """Find the minimum value on a set of sampled points."""
-    ind = np.argmin(y)
+    if is_max:
+        ind = np.argmax(y)
+    else:
+        ind = np.argmin(y)
     y_min_curr = y[ind]
 
-    if y_min is not None and y_min_curr >= y_min:
+    if is_max and y_min is not None and y_min_curr <= y_min:
+        return i_min, y_min, opt_min
+        
+    if not is_max and y_min is not None and y_min_curr >= y_min:
         return i_min, y_min, opt_min
 
     return I[ind, :], y_min_curr, opt[ind]
